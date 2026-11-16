@@ -1,0 +1,841 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>인구 탐험 노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=IBM+Plex+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: light;
+  --sea:#E4EDF0; --paper:#FFFFFF; --soft:#F2F7F8; --ink:#15303C; --muted:#56707B; --line:#C7D5DA;
+  --needle:#C8323C; --male:#2E6F91; --female:#B85C86; --land:#B8892F; --ok:#2F7D4F; --bad:#B23A3A;
+  --display:"Do Hyeon","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --sea:#0E1B21; --paper:#15252D; --soft:#1B2E37; --ink:#E3EEF1; --muted:#9AB1BA; --line:#2C434D;
+    --needle:#EF5A62; --male:#6FB0D2; --female:#E08BB0; --land:#E2B65A; --ok:#5CC38A; --bad:#F07C7C;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --sea:#0E1B21; --paper:#15252D; --soft:#1B2E37; --ink:#E3EEF1; --muted:#9AB1BA; --line:#2C434D;
+  --needle:#EF5A62; --male:#6FB0D2; --female:#E08BB0; --land:#E2B65A; --ok:#5CC38A; --bad:#F07C7C;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--sea);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.65}
+img{max-width:100%}
+button,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--land);outline-offset:2px}
+
+.wrap{max-width:920px;margin:0 auto;padding:0 20px}
+.top{padding:22px 0 8px}
+.brand{font-family:var(--display);font-weight:400;font-size:28px;margin:0;letter-spacing:.01em}
+.route{list-style:none;margin:14px 0 0;padding:0;display:flex;gap:0;counter-reset:s}
+.route li{flex:1;position:relative;font-size:14px;color:var(--muted);padding-top:30px;min-width:0}
+.route li::before{content:"";position:absolute;top:11px;left:0;right:0;height:2px;background:var(--line)}
+.route li .dot{position:absolute;top:0;left:0;width:24px;height:24px;border-radius:50%;background:var(--sea);border:2px solid var(--line);display:grid;place-items:center;font-size:12px;font-weight:700;z-index:1}
+.route li.done::before{background:var(--ink)}
+.route li.done .dot{border-color:var(--ink);background:var(--ink);color:var(--sea)}
+.route li.now{color:var(--ink);font-weight:700}
+.route li.now .dot{border-color:var(--needle);background:var(--needle);color:#fff}
+.route li span.txt{display:block;padding-right:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+main{padding:18px 0 40px}
+.view{background:var(--paper);border-radius:6px;padding:28px;box-shadow:0 1px 0 var(--line)}
+h2{font-family:var(--display);font-weight:400;font-size:34px;line-height:1.2;margin:0}
+h3{font-size:18px;margin:0 0 6px}
+.muted{color:var(--muted)}
+
+.btn{border:2px solid var(--ink);background:transparent;border-radius:999px;padding:10px 22px;cursor:pointer;font-weight:700;font-size:16px}
+.btn.primary{background:var(--ink);color:var(--paper)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.error{color:var(--bad);font-weight:500}
+
+/* step 1 */
+.draw{display:grid;grid-template-columns:minmax(180px,260px) 1fr;gap:32px;align-items:center}
+.compass{width:100%;height:auto;display:block}
+.compass .ring{fill:var(--soft);stroke:var(--ink);stroke-width:3}
+.compass .tick{stroke:var(--muted);stroke-width:2}
+.compass .tick.major{stroke:var(--ink);stroke-width:3}
+.compass .dir{font-family:var(--display);font-size:20px;fill:var(--ink)}
+#needle{transform-box:fill-box;transform-origin:center;transition:transform 2.1s cubic-bezier(.12,.7,.18,1)}
+#needle .n{fill:var(--needle)}
+#needle .s{fill:var(--muted)}
+.compass .hub{fill:var(--paper);stroke:var(--ink);stroke-width:2}
+.lead{margin:0 0 10px;color:var(--muted)}
+.flag{height:64px;width:auto;border:1px solid var(--line);border-radius:3px;display:block;margin:6px 0 10px}
+.country-name{font-family:var(--display);font-size:clamp(40px,8vw,68px);line-height:1.1;margin:0;min-height:1.1em;word-break:keep-all}
+.country-name.cycling{color:var(--muted)}
+.country-name.landed{animation:land .45s ease-out}
+@keyframes land{from{transform:scale(.92);opacity:.3}to{transform:none;opacity:1}}
+.meta{margin:8px 0 0;color:var(--muted);min-height:1.65em}
+.teacher{margin-top:28px;border-top:1px solid var(--line);padding-top:14px;font-size:15px}
+.teacher summary{cursor:pointer;color:var(--muted)}
+.pick{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+.pick select{padding:9px 12px;border:2px solid var(--line);border-radius:8px;background:var(--paper);min-width:220px}
+
+/* step 2 */
+.titlebar{display:flex;align-items:center;gap:14px;margin-bottom:20px}
+.mini-flag{height:36px;width:auto;border:1px solid var(--line);border-radius:2px}
+.stats{display:grid;grid-template-columns:1.4fr 1fr 1fr;border-top:2px solid var(--ink);border-bottom:1px solid var(--line)}
+.stat{padding:16px 18px 16px 0}
+.stat+.stat{padding-left:18px;border-left:1px solid var(--line)}
+.stat .label{margin:0;font-size:14px;color:var(--muted);font-weight:500}
+.stat .value{margin:2px 0 0;font-family:var(--display);font-size:30px;line-height:1.2;font-variant-numeric:tabular-nums}
+.stat.big .value{font-size:40px}
+.stat .sub{margin:4px 0 0;font-size:14px;color:var(--muted)}
+.pyr-fig{margin:26px 0 0}
+.pyr-fig figcaption{font-weight:700;margin-bottom:10px}
+.pyr-fig figcaption span{font-weight:400;color:var(--muted);font-size:14px;margin-left:6px}
+.howto{margin-top:18px;background:var(--soft);border-left:4px solid var(--land);padding:14px 18px;font-size:15px}
+.howto p{margin:0 0 6px}.howto p:last-child{margin:0}
+
+/* pyramid */
+.pyr{--rowh:20px;font-size:13px}
+.pyr.compact{--rowh:12px;font-size:11px}
+.pyr-row,.pyr-head,.pyr-axis{display:grid;grid-template-columns:1fr 54px 1fr;align-items:center}
+.pyr.compact .pyr-row,.pyr.compact .pyr-head,.pyr.compact .pyr-axis{grid-template-columns:1fr 40px 1fr}
+.pyr-head{font-weight:700;margin-bottom:4px}
+.pyr-head .m{text-align:right;color:var(--male)}
+.pyr-head .f{color:var(--female)}
+.pyr-row{height:var(--rowh)}
+.side{height:100%;position:relative;display:flex;align-items:center}
+.side.m{justify-content:flex-end;background:repeating-linear-gradient(to left,var(--line) 0 1px,transparent 1px var(--tick))}
+.side.f{justify-content:flex-start;background:repeating-linear-gradient(to right,var(--line) 0 1px,transparent 1px var(--tick))}
+.side i{display:block;height:calc(100% - 3px);min-width:1px}
+.side.m i{background:var(--male);border-radius:2px 0 0 2px}
+.side.f i{background:var(--female);border-radius:0 2px 2px 0}
+.age{text-align:center;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.pyr-row{cursor:pointer;border-radius:3px}
+.pyr-row:hover,.pyr-row.on,.pyr-row:focus-visible{background:var(--soft)}
+.pyr-row.on .side i{filter:brightness(1.12)}
+.pyr-row:focus-visible{outline:2px solid var(--land);outline-offset:0}
+.pyr-readout{margin:8px 0 0;font-size:14px;color:var(--ink);min-height:1.5em}
+.pyr.compact .pyr-readout{font-size:12px;color:var(--muted)}
+.tip{position:fixed;z-index:20;pointer-events:none;background:var(--ink);color:var(--paper);padding:8px 12px;border-radius:6px;font-size:14px;line-height:1.5;box-shadow:0 4px 14px rgba(0,0,0,.25);max-width:260px}
+.tip b,.tip span{display:block}
+.tip .tm::before,.tip .tf::before{content:"";display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px;vertical-align:0}
+.tip .tm::before{background:var(--male)}
+.tip .tf::before{background:var(--female)}
+.pyr-axis{margin-top:4px;color:var(--muted);height:18px}
+.pyr-axis .side{background:none;display:block}
+.pyr-axis .side span{position:absolute;top:0;transform:translateX(-50%);font-size:11px;white-space:nowrap}
+.pyr-axis .side.m span{transform:translateX(50%)}
+
+/* step 3 */
+.quiz{display:grid;grid-template-columns:300px 1fr;gap:28px;align-items:start}
+.quiz-side{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);background:var(--soft);padding:14px;border-radius:6px}
+.quiz-side h3{font-size:15px}
+.quiz-side .facts{font-size:13px;color:var(--muted);margin:10px 0 0}
+.q{border:0;margin:0 0 26px;padding:0}
+.q legend{font-weight:700;font-size:18px;padding:0;margin-bottom:6px;display:flex;gap:10px}
+.q legend .qn{flex:none;width:28px;height:28px;border-radius:50%;background:var(--ink);color:var(--paper);display:grid;place-items:center;font-size:14px;margin-top:1px}
+.q details{font-size:14px;color:var(--muted);margin:0 0 10px 38px}
+.q details summary{cursor:pointer;color:var(--land);font-weight:500}
+.opts{display:grid;gap:8px;margin-left:38px}
+.opt{display:flex;gap:12px;align-items:flex-start;border:2px solid var(--line);border-radius:8px;padding:10px 14px;cursor:pointer}
+.opt input{margin-top:6px;accent-color:var(--needle)}
+.opt b{display:block}
+.opt small{color:var(--muted);font-size:14px}
+.opt:has(input:checked){border-color:var(--needle);background:var(--soft)}
+.note label{font-weight:700;display:block;margin-bottom:6px}
+.note textarea{width:100%;min-height:80px;border:2px solid var(--line);border-radius:8px;padding:10px;background:var(--paper)}
+
+/* step 4 */
+.score{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin:6px 0 20px}
+.score strong{font-family:var(--display);font-weight:400;font-size:48px;line-height:1}
+.result{border-left:5px solid var(--line);padding:4px 0 4px 16px;margin:0 0 20px}
+.result.ok{border-color:var(--ok)}
+.result.bad{border-color:var(--bad)}
+.result .mark{font-weight:700}
+.result.ok .mark{color:var(--ok)}
+.result.bad .mark{color:var(--bad)}
+.result p{margin:4px 0}
+.evidence{font-size:15px;background:var(--soft);padding:8px 12px;border-radius:6px;display:inline-block}
+.section{margin-top:34px;padding-top:22px;border-top:2px solid var(--ink)}
+.section h2{font-size:28px;margin-bottom:6px}
+.factors{list-style:none;padding:0;margin:16px 0 0;display:grid;gap:14px}
+.factors li{display:grid;grid-template-columns:auto 1fr;gap:4px 12px}
+.tag{font-size:12px;font-weight:700;border-radius:4px;padding:2px 8px;height:fit-content;white-space:nowrap;margin-top:3px}
+.tag.more{background:var(--ok);color:var(--paper)}
+.tag.less{background:var(--bad);color:var(--paper)}
+.tag.info{background:var(--line);color:var(--ink)}
+.factors b{display:block}
+.factors p{margin:2px 0 0;grid-column:2}
+.wiki{margin-top:14px;font-size:15px}
+.wiki blockquote{margin:8px 0;padding:10px 16px;border-left:3px solid var(--line);color:var(--ink)}
+.links{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:10px}
+.links a{color:var(--male);font-weight:700}
+.explore li{margin-bottom:6px}
+.mynote{white-space:pre-wrap}
+footer{font-size:13px;color:var(--muted);padding:0 0 28px}
+.loading{color:var(--muted)}
+
+@media (max-width:720px){
+  body{font-size:16px}
+  .view{padding:20px 16px}
+  .draw{grid-template-columns:1fr;gap:12px}
+  .compass{max-width:170px}
+  .stats{grid-template-columns:1fr 1fr}
+  .stat.big{grid-column:1/-1;border-bottom:1px solid var(--line)}
+  .stat+.stat{padding-left:0;border-left:0}
+  .stat:nth-child(3){padding-left:16px;border-left:1px solid var(--line)}
+  .quiz{grid-template-columns:1fr}
+  .quiz-side{position:static}
+  .opts,.q details{margin-left:0}
+  .route li span.txt{font-size:12px}
+}
+@media (prefers-reduced-motion: reduce){
+  #needle{transition:none}
+  .country-name.landed{animation:none}
+}
+@media print{
+  body{background:#fff}
+  .top .route,.actions,.teacher,footer .noprint{display:none}
+  .view{box-shadow:none;padding:0}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1 class="brand">인구 탐험 노트</h1>
+    <ol class="route" id="route">
+      <li data-step="1"><span class="dot">1</span><span class="txt">나라 뽑기</span></li>
+      <li data-step="2"><span class="dot">2</span><span class="txt">인구 자료</span></li>
+      <li data-step="3"><span class="dot">3</span><span class="txt">피라미드 문제</span></li>
+      <li data-step="4"><span class="dot">4</span><span class="txt">정답과 이유</span></li>
+    </ol>
+  </header>
+
+  <main>
+    <!-- 1. 나라 뽑기 -->
+    <section class="view" id="v1">
+      <div class="draw">
+        <svg class="compass" viewBox="0 0 200 200" aria-hidden="true">
+          <circle class="ring" cx="100" cy="100" r="92"/>
+          <g id="ticks"></g>
+          <text class="dir" x="100" y="38" text-anchor="middle">북</text>
+          <text class="dir" x="168" y="107" text-anchor="middle">동</text>
+          <text class="dir" x="100" y="176" text-anchor="middle">남</text>
+          <text class="dir" x="32" y="107" text-anchor="middle">서</text>
+          <g id="needle">
+            <polygon class="n" points="100,26 110,100 90,100"/>
+            <polygon class="s" points="100,174 110,100 90,100"/>
+          </g>
+          <circle class="hub" cx="100" cy="100" r="7"/>
+        </svg>
+        <div>
+          <p class="lead" id="drawLead">UN 회원국 193개 나라 가운데 한 나라를 무작위로 뽑아요.</p>
+          <img class="flag" id="flag" alt="" hidden onerror="this.hidden=true">
+          <p class="country-name" id="countryName" aria-live="polite">어느 나라일까요?</p>
+          <p class="meta" id="countryMeta"></p>
+          <div class="actions">
+            <button class="btn primary" id="btnDraw" type="button">나라 뽑기</button>
+            <button class="btn primary" id="btnGo" type="button" hidden>인구 자료 보기</button>
+            <button class="btn" id="btnRedraw" type="button" hidden>다시 뽑기</button>
+          </div>
+          <p class="error" id="drawError" hidden></p>
+        </div>
+      </div>
+      <details class="teacher">
+        <summary>선생님용: 나라 직접 고르기</summary>
+        <div class="pick">
+          <select id="pickSel" aria-label="나라 선택"></select>
+          <button class="btn" id="btnPick" type="button">이 나라로 시작</button>
+        </div>
+      </details>
+    </section>
+
+    <!-- 2. 인구 자료 -->
+    <section class="view" id="v2" hidden>
+      <div class="titlebar"><img class="mini-flag" id="flag2" alt="" onerror="this.hidden=true"><h2 id="name2"></h2></div>
+      <div class="stats">
+        <div class="stat big"><p class="label">총인구</p><p class="value" id="popVal"></p><p class="sub" id="popSub"></p></div>
+        <div class="stat"><p class="label">인구 밀도</p><p class="value" id="densVal"></p><p class="sub" id="densSub"></p></div>
+        <div class="stat"><p class="label">국토 면적</p><p class="value" id="areaVal"></p><p class="sub" id="areaSub"></p></div>
+      </div>
+      <figure class="pyr-fig">
+        <figcaption>인구 피라미드<span id="pyrYear"></span></figcaption>
+        <div id="pyr"></div>
+      </figure>
+      <div class="howto">
+        <p><b>인구 피라미드 읽는 법</b></p>
+        <p>가로 막대 하나는 5살 단위 나이대예요. 왼쪽은 남자, 오른쪽은 여자이고, 막대 길이는 전체 인구 가운데 그 나이대가 차지하는 비율(%)이에요.</p>
+        <p>0~14세는 유소년층, 15~64세는 청장년층, 65세 이상은 노년층이라고 불러요. 막대에 마우스를 올리면(휴대폰은 막대를 누르면) 그 나이대의 남녀 인구수가 보여요.</p>
+      </div>
+      <div class="actions">
+        <button class="btn" type="button" data-goto="1">다른 나라 뽑기</button>
+        <button class="btn primary" type="button" data-goto="3">피라미드 문제 풀기</button>
+      </div>
+    </section>
+
+    <!-- 3. 문제 -->
+    <section class="view" id="v3" hidden>
+      <h2 id="name3" style="margin-bottom:18px"></h2>
+      <div class="quiz">
+        <aside class="quiz-side">
+          <h3>인구 피라미드</h3>
+          <div id="pyrSmall"></div>
+          <p class="facts" id="sideFacts"></p>
+        </aside>
+        <form id="quizForm" novalidate>
+          <div id="questions"></div>
+          <div class="note">
+            <label for="noteBox">피라미드에서 무엇을 보고 답을 골랐나요? (선택)</label>
+            <textarea id="noteBox" placeholder="예: 아래쪽 막대가 아주 길어서 아이가 많이 태어나는 나라라고 생각했어요."></textarea>
+          </div>
+          <p class="error" id="quizError" hidden></p>
+          <div class="actions">
+            <button class="btn" type="button" data-goto="2">자료 다시 보기</button>
+            <button class="btn primary" type="submit">정답 확인하기</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- 4. 정답과 이유 -->
+    <section class="view" id="v4" hidden>
+      <h2 id="name4"></h2>
+      <div class="score" id="score"></div>
+      <div id="results"></div>
+      <div id="myNote"></div>
+
+      <div class="section">
+        <h2 id="reasonTitle"></h2>
+        <p id="reasonLead" class="muted"></p>
+        <ul class="factors" id="factors"></ul>
+      </div>
+
+      <div class="section">
+        <h2>나라 알아보기</h2>
+        <div class="wiki" id="wiki"><p class="loading">위키백과에서 소개를 불러오는 중이에요.</p></div>
+        <h3 style="margin-top:22px">더 조사해 보기</h3>
+        <ul class="explore" id="explore"></ul>
+        <div class="links" id="links"></div>
+      </div>
+
+      <div class="actions">
+        <button class="btn" type="button" onclick="window.print()">결과 인쇄하기</button>
+        <button class="btn primary" type="button" data-goto="1">새 나라 탐험하기</button>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    자료: UN 세계인구전망 2024(인구, 인구 피라미드, 기대수명, 출산율, 영아 사망률, 인구 증가율, 인구 이동은 2023년 추정값),
+    세계은행 세계개발지표(국토 면적, 산업별 종사자 비율, 도시화율, 소득 분류 등은 2021년 공개 자료). 자료가 페이지 안에 들어 있어 바로 열려요.
+  </footer>
+</div>
+
+<div class="tip" id="tip" role="tooltip" hidden></div>
+<script>
+/* ---------- UN 회원국 193개 (ISO3, 한국어 이름) ---------- */
+const UN = [
+["AFG","아프가니스탄"],["ALB","알바니아"],["DZA","알제리"],["AND","안도라"],["AGO","앙골라"],["ATG","앤티가 바부다"],["ARG","아르헨티나"],["ARM","아르메니아"],["AUS","오스트레일리아"],["AUT","오스트리아"],
+["AZE","아제르바이잔"],["BHS","바하마"],["BHR","바레인"],["BGD","방글라데시"],["BRB","바베이도스"],["BLR","벨라루스"],["BEL","벨기에"],["BLZ","벨리즈"],["BEN","베냉"],["BTN","부탄"],
+["BOL","볼리비아"],["BIH","보스니아 헤르체고비나"],["BWA","보츠와나"],["BRA","브라질"],["BRN","브루나이"],["BGR","불가리아"],["BFA","부르키나파소"],["BDI","부룬디"],["CPV","카보베르데"],["KHM","캄보디아"],
+["CMR","카메룬"],["CAN","캐나다"],["CAF","중앙아프리카 공화국"],["TCD","차드"],["CHL","칠레"],["CHN","중국"],["COL","콜롬비아"],["COM","코모로"],["COG","콩고 공화국"],["COD","콩고 민주 공화국"],
+["CRI","코스타리카"],["CIV","코트디부아르"],["HRV","크로아티아"],["CUB","쿠바"],["CYP","키프로스"],["CZE","체코"],["DNK","덴마크"],["DJI","지부티"],["DMA","도미니카 연방"],["DOM","도미니카 공화국"],
+["ECU","에콰도르"],["EGY","이집트"],["SLV","엘살바도르"],["GNQ","적도 기니"],["ERI","에리트레아"],["EST","에스토니아"],["SWZ","에스와티니"],["ETH","에티오피아"],["FJI","피지"],["FIN","핀란드"],
+["FRA","프랑스"],["GAB","가봉"],["GMB","감비아"],["GEO","조지아"],["DEU","독일"],["GHA","가나"],["GRC","그리스"],["GRD","그레나다"],["GTM","과테말라"],["GIN","기니"],
+["GNB","기니비사우"],["GUY","가이아나"],["HTI","아이티"],["HND","온두라스"],["HUN","헝가리"],["ISL","아이슬란드"],["IND","인도"],["IDN","인도네시아"],["IRN","이란"],["IRQ","이라크"],
+["IRL","아일랜드"],["ISR","이스라엘"],["ITA","이탈리아"],["JAM","자메이카"],["JPN","일본"],["JOR","요르단"],["KAZ","카자흐스탄"],["KEN","케냐"],["KIR","키리바시"],["PRK","북한"],
+["KOR","대한민국"],["KWT","쿠웨이트"],["KGZ","키르기스스탄"],["LAO","라오스"],["LVA","라트비아"],["LBN","레바논"],["LSO","레소토"],["LBR","라이베리아"],["LBY","리비아"],["LIE","리히텐슈타인"],
+["LTU","리투아니아"],["LUX","룩셈부르크"],["MDG","마다가스카르"],["MWI","말라위"],["MYS","말레이시아"],["MDV","몰디브"],["MLI","말리"],["MLT","몰타"],["MHL","마셜 제도"],["MRT","모리타니"],
+["MUS","모리셔스"],["MEX","멕시코"],["FSM","미크로네시아 연방"],["MDA","몰도바"],["MCO","모나코"],["MNG","몽골"],["MNE","몬테네그로"],["MAR","모로코"],["MOZ","모잠비크"],["MMR","미얀마"],
+["NAM","나미비아"],["NRU","나우루"],["NPL","네팔"],["NLD","네덜란드"],["NZL","뉴질랜드"],["NIC","니카라과"],["NER","니제르"],["NGA","나이지리아"],["MKD","북마케도니아"],["NOR","노르웨이"],
+["OMN","오만"],["PAK","파키스탄"],["PLW","팔라우"],["PAN","파나마"],["PNG","파푸아뉴기니"],["PRY","파라과이"],["PER","페루"],["PHL","필리핀"],["POL","폴란드"],["PRT","포르투갈"],
+["QAT","카타르"],["ROU","루마니아"],["RUS","러시아"],["RWA","르완다"],["KNA","세인트키츠 네비스"],["LCA","세인트루시아"],["VCT","세인트빈센트 그레나딘"],["WSM","사모아"],["SMR","산마리노"],["STP","상투메 프린시페"],
+["SAU","사우디아라비아"],["SEN","세네갈"],["SRB","세르비아"],["SYC","세이셸"],["SLE","시에라리온"],["SGP","싱가포르"],["SVK","슬로바키아"],["SVN","슬로베니아"],["SLB","솔로몬 제도"],["SOM","소말리아"],
+["ZAF","남아프리카 공화국"],["SSD","남수단"],["ESP","스페인"],["LKA","스리랑카"],["SDN","수단"],["SUR","수리남"],["SWE","스웨덴"],["CHE","스위스"],["SYR","시리아"],["TJK","타지키스탄"],
+["TZA","탄자니아"],["THA","태국"],["TLS","동티모르"],["TGO","토고"],["TON","통가"],["TTO","트리니다드 토바고"],["TUN","튀니지"],["TUR","튀르키예"],["TKM","투르크메니스탄"],["TUV","투발루"],
+["UGA","우간다"],["UKR","우크라이나"],["ARE","아랍에미리트"],["GBR","영국"],["USA","미국"],["URY","우루과이"],["UZB","우즈베키스탄"],["VUT","바누아투"],["VEN","베네수엘라"],["VNM","베트남"],
+["YEM","예멘"],["ZMB","잠비아"],["ZWE","짐바브웨"]
+];
+const WIKI_TITLE = {GEO:"조지아 (국가)", PRK:"조선민주주의인민공화국", GIN:"기니", IRL:"아일랜드"};
+const REGION_KO = {EAS:"동아시아·태평양",ECS:"유럽·중앙아시아",LCN:"라틴아메리카·카리브해",MEA:"중동·북아프리카",NAC:"북아메리카",SAS:"남아시아",SSF:"사하라 이남 아프리카"};
+const INCOME_KO = {HIC:"고소득 국가",UMC:"중상위 소득 국가",LMC:"중하위 소득 국가",LIC:"저소득 국가"};
+
+const AGES = ["0004","0509","1014","1519","2024","2529","3034","3539","4044","4549","5054","5559","6064","6569","7074","7579","80UP"];
+const AGE_LABEL = ["0–4","5–9","10–14","15–19","20–24","25–29","30–34","35–39","40–44","45–49","50–54","55–59","60–64","65–69","70–74","75–79","80+"];
+const KOREA_POP = 51.7e6, KOREA_AREA = 97520, WORLD_DENS = 60, WORLD_LE = 73;
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const $ = id => document.getElementById(id);
+const state = { iso:null, name:null, d:null, answers:{}, keys:{}, note:"" };
+const cache = new Map();
+/* 내장 자료: 인구·피라미드·기대수명·출산율·영아 사망률·인구 증가율·순이동률은 UN 세계인구전망 2024(2023년 추정),
+   국토 면적·산업별 종사자 비율·도시화율·1인당 GDP·의료비·소득 분류·지역은 세계은행 세계개발지표(2021년 9월 공개본) */
+const DATA = {"AFG":{"c2":"af","pop":42044654,"area":652860.0,"py":[[8.16,7.813],[7.332,7.01],[6.522,6.215],[5.757,5.479],[5.118,4.912],[4.245,4.152],[3.308,3.26],[2.521,2.492],[2.003,1.983],[1.645,1.651],[1.277,1.334],[0.929,1.046],[0.651,0.794],[0.451,0.578],[0.289,0.389],[0.169,0.249],[0.104,0.159]],"le":66.0,"tfr":4.84,"gr":2.85,"mig":-1.2,"imr":43.8,"urb":26.0,"gdp":509,"hx":9.4,"agr":42.5,"ind":18.5,"srv":39.0,"empY":2019,"inc":"LIC","reg":"SAS"},"ALB":{"c2":"al","pop":2801661,"area":27400.0,"py":[[2.657,2.472],[3.029,2.778],[3.143,2.874],[3.148,2.878],[3.598,3.369],[4.133,4.051],[4.209,4.092],[3.604,3.324],[2.763,2.914],[2.511,2.935],[2.752,3.231],[2.969,3.367],[3.16,3.461],[2.73,3.004],[2.023,2.239],[1.38,1.534],[1.628,2.04]],"le":79.6,"tfr":1.35,"gr":-0.71,"mig":-9.0,"imr":8.1,"urb":62.1,"gdp":5215,"hx":5.3,"agr":36.4,"ind":20.1,"srv":43.4,"empY":2019,"inc":"UMC","reg":"ECS"},"DZA":{"c2":"dz","pop":46497095,"area":2381741.0,"py":[[5.156,4.946],[5.511,5.295],[4.904,4.699],[3.916,3.746],[3.139,3.03],[3.438,3.235],[3.915,3.674],[4.103,3.894],[3.895,3.671],[3.219,3.06],[2.705,2.584],[2.25,2.154],[1.731,1.656],[1.304,1.297],[0.928,0.939],[0.472,0.553],[0.416,0.564]],"le":76.3,"tfr":2.77,"gr":1.44,"mig":-0.6,"imr":17.8,"urb":73.7,"gdp":3310,"hx":6.2,"agr":9.6,"ind":30.4,"srv":60.0,"empY":2019,"inc":"LMC","reg":"MEA"},"AND":{"c2":"ad","pop":81418,"area":470.0,"py":[[1.556,1.444],[2.097,1.959],[2.488,2.471],[2.808,2.52],[2.954,2.807],[3.331,2.797],[3.572,3.249],[3.58,3.379],[4.065,4.076],[4.532,4.447],[4.526,4.269],[4.304,3.988],[3.674,3.45],[2.674,2.509],[1.925,1.863],[1.522,1.443],[1.522,2.199]],"le":84.0,"tfr":1.08,"gr":1.39,"mig":13.1,"imr":5.3,"urb":87.9,"gdp":40897,"hx":6.7,"agr":null,"ind":null,"srv":null,"empY":null,"inc":"HIC","reg":"ECS"},"AGO":{"c2":"ao","pop":37312856,"area":1246700.0,"py":[[8.487,8.357],[7.447,7.374],[6.421,6.387],[5.274,5.267],[4.222,4.253],[3.544,3.603],[3.109,3.187],[2.653,2.741],[2.143,2.244],[1.696,1.82],[1.341,1.5],[1.074,1.234],[0.833,0.959],[0.574,0.681],[0.343,0.431],[0.195,0.272],[0.124,0.211]],"le":64.6,"tfr":5.12,"gr":3.06,"mig":-0.0,"imr":48.4,"urb":66.8,"gdp":1896,"hx":2.5,"agr":50.7,"ind":6.8,"srv":42.5,"empY":2019,"inc":"LMC","reg":"SSF"},"ATG":{"c2":"ag","pop":93549,"area":440.0,"py":[[2.963,2.877],[2.854,2.771],[3.317,3.222],[3.486,3.394],[3.642,3.555],[3.882,3.889],[3.709,3.885],[3.606,3.884],[3.355,3.615],[3.134,3.631],[3.224,3.813],[3.166,3.812],[2.548,3.256],[1.944,2.471],[1.337,1.752],[0.775,1.187],[0.648,1.395]],"le":77.6,"tfr":1.58,"gr":0.5,"mig":0.0,"imr":7.5,"urb":24.4,"gdp":14450,"hx":5.2,"agr":null,"ind":null,"srv":null,"empY":null,"inc":"HIC","reg":"LCN"},"ARG":{"c2":"ar","pop":45617778,"area":2736690.0,"py":[[2.989,2.846],[4.088,3.88],[4.161,3.931],[3.982,3.771],[3.887,3.719],[3.906,3.76],[3.851,3.722],[3.612,3.51],[3.504,3.441],[3.259,3.217],[2.713,2.762],[2.338,2.424],[2.141,2.279],[1.809,2.046],[1.42,1.761],[0.995,1.397],[0.972,1.905]],"le":77.4,"tfr":1.5,"gr":0.35,"mig":0.1,"imr":9.0,"urb":92.1,"gdp":8442,"hx":9.6,"agr":0.1,"ind":21.8,"srv":78.1,"empY":2019,"inc":"UMC","reg":"LCN"},"ARM":{"c2":"am","pop":2984438,"area":28470.0,"py":[[3.084,2.888],[3.393,3.15],[3.566,3.269],[3.218,3.101],[3.068,3.092],[3.317,3.391],[4.049,4.322],[3.916,4.372],[3.407,3.927],[2.758,3.307],[2.439,3.03],[2.528,3.275],[2.814,3.983],[2.189,3.295],[1.367,2.269],[0.634,1.199],[0.696,1.69]],"le":75.7,"tfr":1.71,"gr":2.79,"mig":25.5,"imr":8.7,"urb":63.3,"gdp":4267,"hx":10.0,"agr":24.0,"ind":24.8,"srv":51.2,"empY":2019,"inc":"UMC","reg":"ECS"},"AUS":{"c2":"au","pop":26581446,"area":7692020.0,"py":[[2.954,2.797],[3.075,2.903],[3.182,3.013],[3.102,2.927],[3.113,2.941],[3.542,3.388],[3.676,3.707],[3.621,3.684],[3.377,3.426],[3.028,3.094],[3.138,3.238],[2.839,2.948],[2.781,2.954],[2.446,2.649],[2.115,2.3],[1.725,1.882],[1.901,2.533]],"le":83.9,"tfr":1.64,"gr":0.98,"mig":5.3,"imr":3.2,"urb":86.2,"gdp":51812,"hx":9.3,"agr":2.6,"ind":19.1,"srv":78.4,"empY":2019,"inc":"HIC","reg":"EAS"},"AUT":{"c2":"at","pop":9124755,"area":82520.0,"py":[[2.36,2.24],[2.54,2.395],[2.432,2.294],[2.463,2.341],[2.637,2.493],[3.179,3.027],[3.545,3.399],[3.484,3.381],[3.411,3.363],[3.176,3.188],[3.544,3.612],[3.94,3.943],[3.577,3.665],[2.759,3.015],[2.117,2.474],[1.678,2.124],[2.386,3.82]],"le":82.0,"tfr":1.32,"gr":-0.12,"mig":0.5,"imr":2.8,"urb":58.7,"gdp":48105,"hx":10.3,"agr":3.7,"ind":25.4,"srv":71.0,"empY":2019,"inc":"HIC","reg":"ECS"},"AZE":{"c2":"az","pop":10304789,"area":82654.0,"py":[[3.435,3.061],[3.856,3.501],[4.34,3.905],[3.815,3.415],[3.194,2.969],[3.657,3.793],[4.452,4.768],[4.267,4.471],[3.645,3.755],[2.95,3.136],[2.73,3.063],[2.698,3.203],[2.56,3.095],[1.706,2.189],[0.95,1.276],[0.384,0.612],[0.37,0.777]],"le":74.4,"tfr":1.67,"gr":-0.26,"mig":-8.2,"imr":14.9,"urb":56.4,"gdp":4214,"hx":3.5,"agr":36.0,"ind":14.8,"srv":49.2,"empY":2019,"inc":"UMC","reg":"ECS"},"BHS":{"c2":"bs","pop":400366,"area":10010.0,"py":[[2.756,2.687],[2.984,2.909],[3.427,3.358],[3.566,3.538],[3.521,3.59],[3.954,4.131],[4.037,4.331],[3.524,3.907],[3.245,3.646],[3.194,3.583],[3.25,3.628],[3.027,3.432],[2.368,2.783],[1.688,2.045],[1.19,1.574],[0.977,1.386],[1.057,1.709]],"le":74.6,"tfr":1.37,"gr":0.46,"mig":2.5,"imr":10.9,"urb":83.2,"gdp":28608,"hx":6.2,"agr":2.2,"ind":14.5,"srv":83.3,"empY":2019,"inc":"HIC","reg":"LCN"},"BHR":{"c2":"bh","pop":1587804,"area":780.0,"py":[[3.034,2.926],[3.367,3.251],[3.229,3.071],[2.784,2.66],[4.125,2.485],[5.651,3.418],[8.131,3.991],[9.439,3.771],[7.459,3.259],[5.159,2.611],[3.643,1.911],[2.46,1.593],[1.562,1.237],[0.973,0.812],[0.461,0.414],[0.268,0.256],[0.29,0.3]],"le":81.3,"tfr":1.82,"gr":2.31,"mig":12.7,"imr":5.3,"urb":89.5,"gdp":23443,"hx":4.1,"agr":0.9,"ind":35.2,"srv":63.8,"empY":2019,"inc":"HIC","reg":"MEA"},"BGD":{"c2":"bd","pop":172507468,"area":130170.0,"py":[[4.927,4.7],[4.68,4.402],[4.946,4.513],[4.979,4.949],[4.273,4.99],[3.944,4.811],[3.483,4.014],[3.479,3.91],[3.207,3.256],[2.566,2.542],[2.156,2.217],[1.851,1.799],[1.553,1.44],[1.256,1.15],[0.861,0.909],[0.558,0.616],[0.461,0.602]],"le":74.7,"tfr":2.16,"gr":1.21,"mig":-3.2,"imr":22.8,"urb":38.2,"gdp":1969,"hx":2.3,"agr":38.3,"ind":21.3,"srv":40.4,"empY":2019,"inc":"LMC","reg":"SAS"},"BRB":{"c2":"bb","pop":282376,"area":430.0,"py":[[2.835,2.745],[2.906,2.812],[3.077,2.971],[3.268,3.178],[3.398,3.278],[3.148,3.164],[3.323,3.392],[3.173,3.282],[3.201,3.448],[3.151,3.432],[3.304,3.63],[3.161,3.648],[3.086,3.699],[2.646,3.248],[1.937,2.49],[1.301,1.758],[1.024,1.886]],"le":76.2,"tfr":1.71,"gr":0.03,"mig":-0.3,"imr":9.4,"urb":31.2,"gdp":15191,"hx":6.6,"agr":2.7,"ind":18.9,"srv":78.4,"empY":2019,"inc":"HIC","reg":"LCN"},"BLR":{"c2":"by","pop":9085898,"area":202980.0,"py":[[2.18,2.06],[3.126,2.946],[3.185,3.002],[2.686,2.542],[2.452,2.317],[2.654,2.496],[3.667,3.525],[4.244,4.112],[3.845,3.882],[3.383,3.631],[3.128,3.583],[2.99,3.643],[3.191,4.171],[2.528,3.842],[1.69,3.088],[0.847,1.849],[0.811,2.706]],"le":74.4,"tfr":1.21,"gr":-0.65,"mig":-0.3,"imr":1.9,"urb":79.5,"gdp":6411,"hx":5.6,"agr":11.1,"ind":30.4,"srv":58.6,"empY":2019,"inc":"UMC","reg":"ECS"},"BEL":{"c2":"be","pop":11727682,"area":30280.0,"py":[[2.499,2.392],[2.767,2.643],[2.985,2.853],[2.944,2.806],[2.882,2.762],[3.043,2.994],[3.298,3.296],[3.218,3.239],[3.28,3.275],[3.188,3.151],[3.376,3.308],[3.44,3.384],[3.287,3.333],[2.817,2.981],[2.313,2.574],[1.829,2.21],[2.133,3.5]],"le":82.1,"tfr":1.38,"gr":0.25,"mig":3.6,"imr":3.3,"urb":98.1,"gdp":44594,"hx":10.3,"agr":0.9,"ind":20.8,"srv":78.2,"empY":2019,"inc":"HIC","reg":"ECS"},"BLZ":{"c2":"bz","pop":414097,"area":22810.0,"py":[[4.381,4.177],[4.808,4.586],[4.509,4.308],[4.778,4.611],[4.964,4.782],[4.801,4.605],[4.482,4.305],[3.865,3.807],[3.214,3.249],[2.698,2.76],[2.296,2.399],[1.84,1.885],[1.457,1.508],[1.0,1.055],[0.652,0.705],[0.378,0.411],[0.34,0.383]],"le":73.6,"tfr":2.01,"gr":1.46,"mig":1.4,"imr":8.7,"urb":46.0,"gdp":4436,"hx":5.7,"agr":16.8,"ind":15.6,"srv":67.6,"empY":2019,"inc":"LMC","reg":"LCN"},"BEN":{"c2":"bj","pop":14287903,"area":112760.0,"py":[[7.768,7.546],[7.139,6.959],[6.225,6.06],[5.391,5.23],[4.566,4.434],[3.957,3.865],[3.319,3.274],[2.797,2.809],[2.288,2.337],[1.799,1.87],[1.461,1.546],[1.163,1.254],[0.875,0.967],[0.606,0.69],[0.398,0.468],[0.234,0.31],[0.156,0.241]],"le":60.8,"tfr":4.56,"gr":2.51,"mig":-0.0,"imr":52.1,"urb":48.4,"gdp":1291,"hx":2.5,"agr":38.3,"ind":18.3,"srv":43.4,"empY":2019,"inc":"LMC","reg":"SSF"},"BTN":{"c2":"bt","pop":789106,"area":38140.0,"py":[[3.133,3.002],[3.573,3.306],[4.283,3.887],[4.5,4.169],[4.779,4.425],[5.249,4.296],[5.877,4.61],[5.134,4.104],[4.205,3.409],[3.292,2.675],[2.557,2.119],[2.105,1.829],[1.589,1.462],[1.274,1.243],[0.876,0.86],[0.549,0.567],[0.493,0.567]],"le":73.0,"tfr":1.46,"gr":0.69,"mig":0.4,"imr":19.3,"urb":42.3,"gdp":3122,"hx":3.1,"agr":55.8,"ind":10.1,"srv":34.1,"empY":2019,"inc":"LMC","reg":"SAS"},"BOL":{"c2":"bo","pop":12328824,"area":1083300.0,"py":[[5.168,4.986],[5.073,4.899],[5.001,4.837],[4.832,4.691],[4.597,4.492],[4.372,4.304],[4.077,4.024],[3.556,3.493],[3.027,2.997],[2.592,2.592],[2.174,2.178],[1.77,1.818],[1.377,1.48],[1.0,1.126],[0.672,0.806],[0.447,0.583],[0.372,0.587]],"le":68.6,"tfr":2.55,"gr":1.38,"mig":-0.2,"imr":31.8,"urb":70.1,"gdp":3143,"hx":6.3,"agr":30.5,"ind":19.4,"srv":50.0,"empY":2019,"inc":"LMC","reg":"LCN"},"BIH":{"c2":"ba","pop":3175680,"area":51200.0,"py":[[2.09,1.957],[2.246,2.096],[2.462,2.288],[2.694,2.495],[2.775,2.545],[2.808,2.512],[2.785,2.454],[3.304,3.09],[3.789,3.827],[3.842,4.035],[3.264,3.432],[3.456,3.822],[3.706,4.305],[3.248,4.048],[2.424,3.402],[1.345,2.253],[1.335,3.869]],"le":77.9,"tfr":1.49,"gr":-0.59,"mig":-0.2,"imr":5.3,"urb":49.0,"gdp":6032,"hx":8.9,"agr":18.0,"ind":31.7,"srv":50.3,"empY":2019,"inc":"UMC","reg":"ECS"},"BWA":{"c2":"bw","pop":2500552,"area":566730.0,"py":[[5.967,5.864],[5.304,5.241],[4.953,4.887],[4.947,4.901],[4.918,4.927],[4.963,4.964],[4.634,4.572],[3.518,3.412],[2.675,2.617],[2.078,2.123],[1.745,1.851],[1.382,1.494],[0.995,1.057],[0.763,0.797],[0.531,0.643],[0.268,0.394],[0.209,0.406]],"le":69.2,"tfr":2.73,"gr":1.64,"mig":-2.6,"imr":28.4,"urb":70.9,"gdp":6711,"hx":5.8,"agr":19.9,"ind":17.6,"srv":62.5,"empY":2019,"inc":"UMC","reg":"SSF"},"BRA":{"c2":"br","pop":211574458,"area":8358140.0,"py":[[3.188,3.06],[3.441,3.304],[3.473,3.338],[3.603,3.472],[3.801,3.702],[3.895,3.844],[3.816,3.809],[3.936,3.981],[3.836,3.939],[3.398,3.544],[2.982,3.161],[2.699,2.921],[2.377,2.644],[1.854,2.156],[1.333,1.654],[0.823,1.096],[0.75,1.169]],"le":75.8,"tfr":1.62,"gr":0.41,"mig":-1.1,"imr":12.0,"urb":87.1,"gdp":6797,"hx":9.5,"agr":9.1,"ind":20.0,"srv":70.9,"empY":2019,"inc":"UMC","reg":"LCN"},"BRN":{"c2":"bn","pop":460869,"area":5270.0,"py":[[3.527,3.272],[3.705,3.431],[3.636,3.356],[3.623,3.34],[4.147,3.717],[4.885,3.909],[5.076,3.968],[5.008,3.833],[4.58,3.627],[3.914,3.377],[3.321,3.051],[2.573,2.446],[1.991,2.002],[1.406,1.52],[0.896,1.007],[0.446,0.528],[0.384,0.498]],"le":75.3,"tfr":1.75,"gr":0.84,"mig":0.0,"imr":8.1,"urb":78.2,"gdp":27466,"hx":2.4,"agr":2.0,"ind":20.8,"srv":77.3,"empY":2019,"inc":"HIC","reg":"EAS"},"BGR":{"c2":"bg","pop":6778222,"area":108560.0,"py":[[2.332,2.209],[2.505,2.366],[2.622,2.487],[2.551,2.409],[2.427,2.296],[2.357,2.229],[3.203,3.042],[3.656,3.449],[3.734,3.483],[4.069,3.883],[3.796,3.686],[3.296,3.369],[3.144,3.463],[2.864,3.56],[2.465,3.516],[1.757,2.905],[1.614,3.255]],"le":75.6,"tfr":1.75,"gr":-0.52,"mig":0.8,"imr":4.7,"urb":75.7,"gdp":9976,"hx":7.3,"agr":6.6,"ind":30.0,"srv":63.4,"empY":2019,"inc":"UMC","reg":"ECS"},"BFA":{"c2":"bf","pop":23285916,"area":273600.0,"py":[[7.311,7.082],[7.323,7.098],[6.75,6.551],[5.746,5.596],[4.688,4.607],[3.862,3.857],[3.237,3.27],[2.777,2.829],[2.294,2.359],[1.751,1.856],[1.288,1.442],[0.982,1.164],[0.729,0.915],[0.499,0.675],[0.296,0.445],[0.18,0.279],[0.095,0.167]],"le":61.1,"tfr":4.19,"gr":2.26,"mig":-1.1,"imr":52.1,"urb":30.6,"gdp":831,"hx":5.6,"agr":26.2,"ind":25.2,"srv":48.6,"empY":2019,"inc":"LIC","reg":"SSF"},"BDI":{"c2":"bi","pop":13874901,"area":25680.0,"py":[[7.912,7.784],[7.597,7.51],[7.14,7.098],[5.679,5.672],[4.16,4.173],[3.261,3.292],[3.186,3.245],[2.913,3.0],[2.432,2.53],[1.673,1.748],[1.167,1.235],[0.83,0.903],[0.628,0.711],[0.493,0.585],[0.335,0.425],[0.164,0.236],[0.107,0.178]],"le":63.7,"tfr":4.88,"gr":2.71,"mig":0.1,"imr":35.3,"urb":13.7,"gdp":274,"hx":7.7,"agr":86.2,"ind":3.3,"srv":10.4,"empY":2019,"inc":"LIC","reg":"SSF"},"CPV":{"c2":"cv","pop":523614,"area":4030.0,"py":[[3.66,3.489],[4.784,4.566],[4.899,4.572],[4.741,4.382],[4.27,3.719],[4.43,4.033],[4.713,4.373],[4.292,4.011],[3.577,3.182],[2.78,2.483],[2.255,2.142],[2.107,2.181],[1.738,1.908],[1.137,1.466],[0.725,1.071],[0.409,0.724],[0.345,0.835]],"le":76.1,"tfr":1.52,"gr":0.49,"mig":-2.3,"imr":9.8,"urb":66.7,"gdp":3064,"hx":5.4,"agr":10.6,"ind":21.8,"srv":67.6,"empY":2019,"inc":"LMC","reg":"SSF"},"KHM":{"c2":"kh","pop":17533083,"area":176520.0,"py":[[5.281,5.042],[5.166,4.945],[4.842,4.667],[4.701,4.539],[3.939,3.961],[3.709,3.878],[4.028,4.15],[3.782,3.907],[3.457,3.556],[2.256,2.36],[2.058,2.254],[1.878,2.16],[1.536,1.888],[1.006,1.496],[0.677,1.074],[0.39,0.628],[0.282,0.507]],"le":70.7,"tfr":2.58,"gr":1.25,"mig":-1.8,"imr":19.2,"urb":24.2,"gdp":1513,"hx":6.0,"agr":34.5,"ind":27.9,"srv":37.6,"empY":2019,"inc":"LMC","reg":"EAS"},"CMR":{"c2":"cm","pop":28747541,"area":472710.0,"py":[[7.756,7.61],[7.034,6.925],[6.17,6.111],[5.401,5.381],[4.507,4.509],[3.859,3.882],[3.424,3.458],[2.911,2.944],[2.381,2.417],[1.862,1.905],[1.447,1.499],[1.061,1.126],[0.779,0.858],[0.552,0.636],[0.35,0.428],[0.202,0.267],[0.141,0.207]],"le":63.7,"tfr":4.32,"gr":2.64,"mig":-0.2,"imr":47.2,"urb":57.6,"gdp":1499,"hx":3.5,"agr":43.5,"ind":14.4,"srv":42.1,"empY":2019,"inc":"LMC","reg":"SSF"},"CAN":{"c2":"ca","pop":39538484,"area":8965590.0,"py":[[2.431,2.313],[2.613,2.488],[2.724,2.611],[2.771,2.69],[3.18,3.031],[3.627,3.355],[3.695,3.527],[3.54,3.469],[3.368,3.386],[3.087,3.154],[3.048,3.1],[3.185,3.24],[3.347,3.447],[2.949,3.121],[2.347,2.574],[1.777,2.025],[1.97,2.811]],"le":82.6,"tfr":1.35,"gr":1.22,"mig":11.0,"imr":4.3,"urb":81.6,"gdp":43242,"hx":10.8,"agr":1.5,"ind":19.2,"srv":79.2,"empY":2019,"inc":"HIC","reg":"NAC"},"CAF":{"c2":"cf","pop":5240249,"area":622980.0,"py":[[9.267,9.13],[7.938,7.776],[7.544,7.435],[6.135,6.2],[4.839,5.313],[3.383,3.983],[2.23,2.836],[1.513,2.113],[1.133,1.561],[0.886,1.209],[0.844,1.235],[0.727,1.136],[0.599,0.912],[0.453,0.626],[0.276,0.358],[0.119,0.154],[0.055,0.086]],"le":57.4,"tfr":6.01,"gr":3.41,"mig":-2.8,"imr":67.7,"urb":42.2,"gdp":477,"hx":11.0,"agr":69.8,"ind":6.3,"srv":23.9,"empY":2019,"inc":"LIC","reg":"SSF"},"TCD":{"c2":"td","pop":19870444,"area":1259200.0,"py":[[9.219,8.96],[7.671,7.475],[6.535,6.36],[5.543,5.41],[4.589,4.529],[3.793,3.77],[3.076,3.077],[2.392,2.418],[1.91,1.952],[1.617,1.669],[1.274,1.337],[0.931,1.008],[0.66,0.737],[0.439,0.506],[0.274,0.329],[0.139,0.172],[0.098,0.13]],"le":55.1,"tfr":6.12,"gr":5.71,"mig":25.7,"imr":63.7,"urb":23.5,"gdp":614,"hx":4.1,"agr":75.1,"ind":1.9,"srv":23.1,"empY":2019,"inc":"LIC","reg":"SSF"},"CHL":{"c2":"cl","pop":19714431,"area":743532.0,"py":[[2.472,2.376],[3.071,2.963],[3.206,3.086],[3.129,3.009],[3.457,3.365],[3.999,3.909],[4.244,4.145],[3.971,3.894],[3.597,3.54],[3.375,3.35],[3.218,3.24],[2.985,3.076],[2.629,2.782],[2.195,2.377],[1.711,1.918],[1.133,1.359],[1.31,1.907]],"le":81.2,"tfr":1.17,"gr":0.57,"mig":3.2,"imr":4.1,"urb":87.7,"gdp":13232,"hx":9.1,"agr":9.0,"ind":22.2,"srv":68.8,"empY":2019,"inc":"HIC","reg":"LCN"},"CHN":{"c2":"cn","pop":1420908919,"area":9424702.9,"py":[[2.035,1.825],[3.274,2.863],[3.396,2.915],[3.126,2.665],[3.017,2.584],[3.219,2.805],[4.058,3.651],[4.214,3.911],[3.588,3.407],[3.437,3.317],[4.311,4.247],[3.99,4.027],[2.737,2.843],[2.552,2.808],[1.943,2.307],[1.1,1.349],[0.961,1.516]],"le":78.0,"tfr":1.0,"gr":-0.24,"mig":-0.4,"imr":5.1,"urb":61.4,"gdp":10500,"hx":5.4,"agr":25.3,"ind":27.4,"srv":47.2,"empY":2019,"inc":"UMC","reg":"EAS"},"COL":{"c2":"co","pop":52609701,"area":1109500.0,"py":[[3.447,3.306],[3.401,3.266],[3.574,3.427],[3.877,3.732],[4.212,4.121],[4.388,4.363],[4.222,4.229],[3.79,3.82],[3.479,3.565],[3.054,3.188],[2.771,2.952],[2.631,2.847],[2.261,2.506],[1.719,1.969],[1.203,1.436],[0.746,0.967],[0.57,0.96]],"le":77.7,"tfr":1.65,"gr":1.1,"mig":3.0,"imr":9.8,"urb":81.4,"gdp":5333,"hx":7.6,"agr":15.8,"ind":20.1,"srv":64.1,"empY":2019,"inc":"UMC","reg":"LCN"},"COM":{"c2":"km","pop":858507,"area":1861.0,"py":[[6.755,6.582],[6.307,6.149],[5.821,5.627],[5.148,4.903],[4.632,4.488],[3.615,3.768],[3.234,3.441],[3.123,3.115],[2.818,2.725],[2.333,2.214],[1.89,1.731],[1.47,1.416],[1.089,1.124],[0.805,0.901],[0.579,0.679],[0.397,0.483],[0.278,0.362]],"le":66.8,"tfr":3.88,"gr":1.91,"mig":-2.4,"imr":37.1,"urb":29.4,"gdp":1403,"hx":4.6,"agr":34.4,"ind":18.8,"srv":46.8,"empY":2019,"inc":"LMC","reg":"SSF"},"COG":{"c2":"cg","pop":6257628,"area":341500.0,"py":[[7.188,7.051],[6.803,6.678],[6.529,6.429],[5.295,5.239],[4.241,4.21],[3.588,3.569],[3.174,3.17],[2.922,2.939],[2.599,2.579],[2.232,2.252],[1.757,1.808],[1.352,1.437],[0.972,1.037],[0.632,0.714],[0.366,0.441],[0.201,0.255],[0.143,0.197]],"le":65.8,"tfr":4.16,"gr":2.42,"mig":-0.2,"imr":28.8,"urb":67.8,"gdp":1973,"hx":2.1,"agr":33.5,"ind":21.5,"srv":45.0,"empY":2019,"inc":"LMC","reg":"SSF"},"COD":{"c2":"cd","pop":107516151,"area":2267050.0,"py":[[9.132,9.037],[7.622,7.601],[6.331,6.345],[5.184,5.208],[4.321,4.357],[3.658,3.706],[2.963,3.018],[2.415,2.468],[1.896,1.949],[1.518,1.583],[1.293,1.374],[1.063,1.151],[0.824,0.911],[0.598,0.679],[0.396,0.468],[0.243,0.306],[0.156,0.225]],"le":61.9,"tfr":6.05,"gr":3.26,"mig":-0.1,"imr":49.1,"urb":45.6,"gdp":557,"hx":3.3,"agr":64.3,"ind":9.8,"srv":25.9,"empY":2019,"inc":"LIC","reg":"SSF"},"CRI":{"c2":"cr","pop":5118075,"area":51060.0,"py":[[2.758,2.644],[3.426,3.284],[3.551,3.401],[3.599,3.451],[3.8,3.65],[3.978,3.857],[4.074,3.97],[4.061,4.01],[3.627,3.685],[3.112,3.287],[2.794,3.037],[2.731,2.984],[2.506,2.755],[1.943,2.19],[1.438,1.66],[1.003,1.194],[1.012,1.524]],"le":80.8,"tfr":1.33,"gr":0.49,"mig":0.2,"imr":6.5,"urb":80.8,"gdp":12077,"hx":7.6,"agr":12.0,"ind":18.8,"srv":69.2,"empY":2019,"inc":"UMC","reg":"LCN"},"CIV":{"c2":"ci","pop":31547788,"area":318000.0,"py":[[7.366,7.259],[7.114,7.047],[6.294,5.999],[5.403,5.125],[4.527,4.123],[3.659,3.588],[3.374,3.55],[3.172,3.283],[2.781,2.645],[2.244,1.933],[1.643,1.382],[1.186,1.063],[0.849,0.803],[0.579,0.547],[0.361,0.351],[0.199,0.216],[0.145,0.189]],"le":61.9,"tfr":4.28,"gr":2.45,"mig":0.2,"imr":51.4,"urb":51.7,"gdp":2326,"hx":4.2,"agr":40.2,"ind":12.9,"srv":47.0,"empY":2019,"inc":"LMC","reg":"SSF"},"HRV":{"c2":"hr","pop":3889335,"area":56590.0,"py":[[2.216,2.093],[2.327,2.193],[2.682,2.528],[2.701,2.556],[2.622,2.481],[2.855,2.707],[2.835,2.687],[3.217,3.11],[3.557,3.448],[3.497,3.454],[3.362,3.406],[3.493,3.692],[3.468,3.838],[3.304,3.824],[2.651,3.383],[1.617,2.435],[1.824,3.936]],"le":78.6,"tfr":1.47,"gr":-0.34,"mig":2.6,"imr":3.5,"urb":57.6,"gdp":13828,"hx":6.8,"agr":6.2,"ind":27.7,"srv":66.1,"empY":2019,"inc":"HIC","reg":"ECS"},"CUB":{"c2":"cu","pop":11000593,"area":103800.0,"py":[[2.328,2.172],[2.719,2.53],[2.912,2.761],[2.704,2.575],[3.111,2.977],[3.105,2.952],[3.556,3.347],[3.541,3.363],[2.869,2.786],[3.282,3.315],[4.277,4.467],[4.251,4.586],[3.413,3.735],[2.262,2.615],[1.908,2.283],[1.441,1.829],[1.664,2.364]],"le":78.1,"tfr":1.44,"gr":-0.35,"mig":-2.1,"imr":4.4,"urb":77.2,"gdp":9100,"hx":11.2,"agr":17.4,"ind":17.1,"srv":65.5,"empY":2019,"inc":"UMC","reg":"LCN"},"CYP":{"c2":"cy","pop":1351837,"area":9240.0,"py":[[2.831,2.663],[2.78,2.619],[2.659,2.504],[2.537,2.395],[2.81,2.703],[3.521,3.364],[4.741,4.146],[5.19,4.483],[4.477,4.2],[3.552,3.669],[3.105,3.318],[2.866,3.042],[2.643,2.724],[2.268,2.303],[1.756,1.914],[1.292,1.543],[1.35,2.033]],"le":81.6,"tfr":1.39,"gr":1.02,"mig":6.5,"imr":3.1,"urb":66.8,"gdp":26624,"hx":6.8,"agr":2.4,"ind":18.4,"srv":79.2,"empY":2019,"inc":"HIC","reg":"ECS"},"CZE":{"c2":"cz","pop":10791554,"area":77200.0,"py":[[2.536,2.42],[2.718,2.589],[2.704,2.581],[2.71,2.592],[2.533,2.429],[2.697,2.561],[3.405,3.184],[3.511,3.28],[3.746,3.499],[4.419,4.184],[3.677,3.516],[3.158,3.098],[2.745,2.819],[2.755,3.1],[2.509,3.137],[1.897,2.702],[1.588,3.002]],"le":79.8,"tfr":1.45,"gr":-0.34,"mig":-1.4,"imr":2.2,"urb":74.1,"gdp":22762,"hx":7.6,"agr":2.7,"ind":37.2,"srv":60.1,"empY":2019,"inc":"HIC","reg":"ECS"},"DNK":{"c2":"dk","pop":5963903,"area":40000.0,"py":[[2.644,2.505],[2.687,2.541],[2.761,2.626],[2.999,2.862],[3.149,3.04],[3.489,3.354],[3.444,3.319],[3.048,2.942],[2.865,2.842],[3.162,3.176],[3.285,3.292],[3.523,3.5],[3.074,3.122],[2.689,2.815],[2.386,2.603],[2.286,2.587],[2.213,3.171]],"le":81.9,"tfr":1.51,"gr":0.53,"mig":5.2,"imr":2.9,"urb":88.1,"gdp":60909,"hx":10.1,"agr":2.2,"ind":18.5,"srv":79.2,"empY":2019,"inc":"HIC","reg":"ECS"},"DJI":{"c2":"dj","pop":1160872,"area":23180.0,"py":[[5.005,4.864],[4.923,4.811],[4.925,4.834],[5.006,4.934],[4.882,4.85],[4.258,4.264],[3.893,3.922],[3.404,3.465],[3.06,3.164],[2.759,2.895],[2.288,2.441],[1.749,1.904],[1.279,1.43],[0.89,1.035],[0.61,0.744],[0.388,0.499],[0.254,0.372]],"le":66.0,"tfr":2.61,"gr":1.38,"mig":0.4,"imr":36.2,"urb":78.1,"gdp":3426,"hx":2.3,"agr":24.5,"ind":13.4,"srv":62.0,"empY":2019,"inc":"LMC","reg":"MEA"},"DMA":{"c2":"dm","pop":66353,"area":750.0,"py":[[2.773,2.698],[3.013,3.013],[3.234,3.279],[3.203,3.332],[3.364,3.412],[3.759,3.727],[4.261,4.194],[3.839,3.79],[3.463,3.279],[2.967,2.796],[3.561,3.465],[3.48,3.412],[3.017,2.832],[2.371,2.279],[1.637,1.65],[1.078,1.204],[1.013,1.607]],"le":71.1,"tfr":1.48,"gr":-0.47,"mig":-3.0,"imr":27.7,"urb":71.1,"gdp":6527,"hx":6.6,"agr":null,"ind":null,"srv":null,"empY":null,"inc":"UMC","reg":"LCN"},"DOM":{"c2":"do","pop":11379988,"area":48310.0,"py":[[4.471,4.306],[4.567,4.397],[4.604,4.422],[4.349,4.171],[4.334,4.184],[4.109,3.999],[3.926,3.872],[3.484,3.473],[3.156,3.174],[2.837,2.899],[2.486,2.602],[2.175,2.346],[1.861,2.071],[1.429,1.652],[0.933,1.136],[0.534,0.711],[0.466,0.866]],"le":73.7,"tfr":2.24,"gr":0.86,"mig":-3.1,"imr":25.6,"urb":82.5,"gdp":7268,"hx":5.7,"agr":8.8,"ind":18.8,"srv":72.4,"empY":2019,"inc":"UMC","reg":"LCN"},"ECU":{"c2":"ec","pop":18058157,"area":248360.0,"py":[[3.927,3.762],[4.169,3.998],[4.534,4.351],[4.44,4.267],[4.389,4.248],[4.316,4.225],[4.081,4.03],[3.725,3.708],[3.335,3.37],[2.897,2.959],[2.511,2.597],[2.117,2.235],[1.726,1.865],[1.366,1.524],[1.04,1.211],[0.683,0.845],[0.601,0.949]],"le":77.4,"tfr":1.82,"gr":0.87,"mig":-1.2,"imr":9.6,"urb":64.2,"gdp":5600,"hx":8.1,"agr":29.7,"ind":17.2,"srv":53.0,"empY":2019,"inc":"UMC","reg":"LCN"},"EGY":{"c2":"eg","pop":115578409,"area":995450.0,"py":[[5.21,4.957],[5.83,5.567],[5.45,5.196],[4.691,4.494],[4.278,4.1],[3.924,3.749],[3.822,3.673],[3.639,3.559],[3.165,3.083],[2.687,2.596],[2.264,2.19],[1.881,1.886],[1.48,1.588],[1.047,1.238],[0.637,0.843],[0.325,0.493],[0.159,0.298]],"le":71.6,"tfr":2.75,"gr":1.82,"mig":2.7,"imr":14.6,"urb":42.8,"gdp":3548,"hx":4.9,"agr":20.6,"ind":26.9,"srv":52.4,"empY":2019,"inc":"LMC","reg":"MEA"},"SLV":{"c2":"sv","pop":6323985,"area":20720.0,"py":[[3.997,3.821],[4.277,4.063],[4.579,4.281],[4.564,4.282],[4.976,4.734],[5.043,4.891],[4.127,4.168],[2.935,3.424],[2.479,3.307],[2.264,3.196],[2.0,2.85],[1.724,2.501],[1.384,2.064],[1.115,1.654],[0.872,1.314],[0.617,0.943],[0.549,1.007]],"le":72.1,"tfr":1.78,"gr":0.46,"mig":-3.7,"imr":9.5,"urb":73.4,"gdp":3799,"hx":7.1,"agr":16.3,"ind":22.5,"srv":61.2,"empY":2019,"inc":"LMC","reg":"LCN"},"GNQ":{"c2":"gq","pop":1869618,"area":28050.0,"py":[[6.851,6.718],[6.325,6.223],[5.668,5.591],[4.787,4.678],[3.997,3.641],[3.862,3.395],[4.145,3.414],[4.191,3.137],[3.414,2.407],[2.738,1.949],[2.161,1.635],[1.641,1.398],[1.236,1.146],[0.783,0.816],[0.508,0.572],[0.253,0.294],[0.178,0.25]],"le":63.7,"tfr":4.08,"gr":2.39,"mig":2.2,"imr":52.6,"urb":73.1,"gdp":7143,"hx":3.0,"agr":39.5,"ind":19.4,"srv":41.1,"empY":2019,"inc":"UMC","reg":"SSF"},"ERI":{"c2":"er","pop":3501780,"area":101000.0,"py":[[6.708,6.552],[6.318,6.197],[6.374,6.272],[6.089,6.01],[5.061,5.002],[4.191,4.144],[2.982,2.978],[2.382,2.45],[1.955,2.107],[1.767,2.017],[1.516,1.772],[1.259,1.513],[0.983,1.225],[0.681,0.893],[0.481,0.658],[0.351,0.468],[0.257,0.386]],"le":68.6,"tfr":3.71,"gr":1.81,"mig":-4.4,"imr":27.1,"urb":35.8,"gdp":643,"hx":4.1,"agr":63.1,"ind":7.3,"srv":29.6,"empY":2019,"inc":"LIC","reg":"SSF"},"EST":{"c2":"ee","pop":1367226,"area":43470.0,"py":[[2.451,2.321],[2.788,2.616],[2.881,2.754],[2.842,2.681],[2.437,2.337],[2.596,2.469],[3.577,3.233],[4.003,3.644],[3.664,3.419],[3.499,3.351],[3.411,3.406],[2.95,3.177],[2.95,3.47],[2.547,3.451],[2.017,3.218],[1.299,2.445],[1.605,4.487]],"le":79.2,"tfr":1.35,"gr":0.0,"mig":4.2,"imr":1.4,"urb":69.2,"gdp":23312,"hx":6.7,"agr":3.2,"ind":28.7,"srv":68.1,"empY":2019,"inc":"HIC","reg":"ECS"},"SWZ":{"c2":"sz","pop":1236306,"area":17200.0,"py":[[5.799,5.68],[5.611,5.565],[5.443,5.43],[5.217,5.224],[4.908,4.771],[4.359,4.285],[3.947,4.056],[3.549,3.61],[2.915,2.953],[2.111,2.181],[1.46,1.728],[1.203,1.608],[0.886,1.292],[0.722,1.024],[0.478,0.679],[0.272,0.468],[0.208,0.36]],"le":64.1,"tfr":2.75,"gr":0.94,"mig":-6.9,"imr":37.5,"urb":24.2,"gdp":3415,"hx":6.5,"agr":12.1,"ind":23.4,"srv":64.5,"empY":2019,"inc":"LMC","reg":"SSF"},"ETH":{"c2":"et","pop":130355024,"area":1129300.4,"py":[[7.546,7.218],[6.529,6.293],[5.904,5.716],[5.645,5.5],[5.009,4.939],[4.324,4.277],[3.56,3.533],[2.754,2.747],[2.158,2.174],[1.777,1.848],[1.424,1.557],[1.163,1.307],[0.888,1.014],[0.602,0.704],[0.399,0.486],[0.256,0.333],[0.168,0.25]],"le":67.3,"tfr":3.99,"gr":2.58,"mig":-0.1,"imr":32.9,"urb":21.7,"gdp":936,"hx":3.3,"agr":66.6,"ind":9.3,"srv":24.0,"empY":2019,"inc":"LIC","reg":"SSF"},"FJI":{"c2":"fj","pop":926544,"area":18270.0,"py":[[4.568,4.295],[4.728,4.56],[4.548,4.529],[4.356,4.428],[3.969,4.026],[3.973,3.973],[3.918,3.894],[3.725,3.724],[3.546,3.538],[2.901,2.873],[2.449,2.434],[2.299,2.37],[1.909,2.054],[1.299,1.505],[0.763,1.001],[0.431,0.658],[0.251,0.506]],"le":67.3,"tfr":2.28,"gr":0.52,"mig":-3.6,"imr":22.9,"urb":57.2,"gdp":4882,"hx":3.4,"agr":17.6,"ind":14.1,"srv":68.3,"empY":2019,"inc":"UMC","reg":"EAS"},"FIN":{"c2":"fi","pop":5612044,"area":303920.0,"py":[[2.136,2.044],[2.524,2.411],[2.897,2.769],[2.856,2.731],[2.796,2.637],[3.07,2.89],[3.411,3.195],[3.348,3.124],[3.355,3.156],[3.186,3.031],[2.884,2.804],[3.251,3.255],[3.193,3.295],[3.016,3.264],[2.852,3.24],[2.402,2.945],[2.24,3.793]],"le":81.9,"tfr":1.28,"gr":0.39,"mig":6.8,"imr":1.9,"urb":85.5,"gdp":49041,"hx":9.0,"agr":3.8,"ind":21.6,"srv":74.6,"empY":2019,"inc":"HIC","reg":"ECS"},"FRA":{"c2":"fr","pop":66496159,"area":547557.0,"py":[[2.594,2.479],[2.829,2.702],[3.093,2.945],[3.174,3.011],[3.1,2.943],[2.903,2.848],[2.858,2.888],[2.937,3.074],[3.041,3.163],[3.066,3.086],[3.255,3.375],[3.116,3.308],[3.001,3.263],[2.742,3.108],[2.51,2.97],[1.96,2.444],[2.297,3.918]],"le":83.3,"tfr":1.64,"gr":0.17,"mig":1.4,"imr":3.5,"urb":81.0,"gdp":38625,"hx":11.3,"agr":2.5,"ind":20.4,"srv":77.0,"empY":2019,"inc":"HIC","reg":"ECS"},"GAB":{"c2":"ga","pop":2511862,"area":257670.0,"py":[[6.653,6.563],[6.208,6.136],[5.537,5.494],[4.623,4.61],[4.047,4.024],[3.853,3.728],[3.946,3.663],[3.746,3.368],[3.22,2.864],[2.556,2.289],[1.959,1.799],[1.469,1.405],[1.084,1.094],[0.764,0.823],[0.52,0.601],[0.321,0.39],[0.272,0.37]],"le":68.3,"tfr":3.65,"gr":2.18,"mig":0.4,"imr":27.4,"urb":90.1,"gdp":7006,"hx":2.7,"agr":30.0,"ind":10.7,"srv":59.3,"empY":2019,"inc":"UMC","reg":"SSF"},"GMB":{"c2":"gm","pop":2728905,"area":10120.0,"py":[[7.153,6.992],[6.825,6.691],[6.48,6.362],[5.541,5.45],[4.687,4.631],[4.14,4.13],[3.503,3.53],[2.768,2.808],[2.104,2.138],[1.622,1.683],[1.431,1.567],[1.248,1.416],[0.943,1.131],[0.609,0.764],[0.351,0.443],[0.227,0.274],[0.16,0.198]],"le":65.9,"tfr":4.01,"gr":2.3,"mig":-1.1,"imr":29.5,"urb":62.6,"gdp":787,"hx":3.1,"agr":27.0,"ind":15.0,"srv":58.0,"empY":2019,"inc":"LIC","reg":"SSF"},"GEO":{"c2":"ge","pop":3807839,"area":69490.0,"py":[[3.21,3.012],[3.913,3.655],[3.679,3.479],[3.061,2.894],[2.857,2.688],[3.021,2.936],[3.564,3.676],[3.631,3.821],[3.249,3.542],[2.93,3.359],[2.753,3.259],[2.597,3.345],[2.701,3.7],[2.166,3.173],[1.573,2.624],[0.859,1.619],[0.842,2.613]],"le":74.5,"tfr":1.81,"gr":0.02,"mig":0.5,"imr":8.1,"urb":59.5,"gdp":4279,"hx":7.1,"agr":38.2,"ind":14.3,"srv":47.6,"empY":2019,"inc":"UMC","reg":"ECS"},"DEU":{"c2":"de","pop":84695563,"area":349380.0,"py":[[2.348,2.225],[2.477,2.351],[2.316,2.19],[2.343,2.21],[2.597,2.395],[2.996,2.734],[3.301,3.082],[3.382,3.214],[3.21,3.154],[2.953,2.933],[3.376,3.358],[4.096,4.078],[3.806,3.9],[3.02,3.256],[2.471,2.863],[1.733,2.11],[2.953,4.568]],"le":81.4,"tfr":1.44,"gr":0.35,"mig":7.2,"imr":3.0,"urb":77.5,"gdp":45724,"hx":11.4,"agr":1.2,"ind":27.2,"srv":71.6,"empY":2019,"inc":"HIC","reg":"ECS"},"GHA":{"c2":"gh","pop":34108457,"area":227540.0,"py":[[6.304,6.121],[6.146,6.0],[5.775,5.661],[5.131,5.047],[4.548,4.489],[3.912,3.881],[3.647,3.628],[3.291,3.291],[2.828,2.849],[2.294,2.348],[1.836,1.913],[1.48,1.582],[1.115,1.215],[0.725,0.808],[0.451,0.557],[0.263,0.349],[0.201,0.315]],"le":65.5,"tfr":3.4,"gr":1.9,"mig":-0.3,"imr":30.7,"urb":57.3,"gdp":2329,"hx":3.5,"agr":29.8,"ind":21.0,"srv":49.2,"empY":2019,"inc":"LMC","reg":"SSF"},"GRC":{"c2":"gr","pop":10136521,"area":128900.0,"py":[[1.97,1.856],[2.32,2.198],[2.615,2.476],[2.677,2.502],[2.68,2.423],[2.684,2.424],[2.686,2.574],[2.854,2.865],[3.63,3.628],[3.759,3.854],[3.707,3.922],[3.511,3.854],[3.096,3.588],[2.836,3.319],[2.47,2.92],[2.073,2.623],[2.868,4.538]],"le":81.9,"tfr":1.33,"gr":-2.08,"mig":-15.6,"imr":3.3,"urb":79.7,"gdp":17676,"hx":7.7,"agr":11.6,"ind":15.3,"srv":73.1,"empY":2019,"inc":"HIC","reg":"ECS"},"GRD":{"c2":"gd","pop":117155,"area":340.0,"py":[[3.017,2.907],[3.208,3.083],[3.796,3.643],[3.716,3.571],[3.674,3.539],[3.958,3.813],[4.451,4.303],[4.568,4.523],[3.475,3.471],[2.782,2.584],[2.661,2.508],[2.686,2.625],[2.699,2.688],[2.119,2.122],[1.416,1.466],[0.848,1.089],[1.072,1.921]],"le":75.2,"tfr":1.49,"gr":0.13,"mig":-1.6,"imr":13.1,"urb":36.5,"gdp":9680,"hx":4.5,"agr":null,"ind":null,"srv":null,"empY":null,"inc":"UMC","reg":"LCN"},"GTM":{"c2":"gt","pop":18265192,"area":107160.0,"py":[[5.189,5.02],[5.586,5.421],[5.391,5.251],[5.236,5.119],[5.096,5.004],[4.679,4.634],[4.104,4.091],[3.411,3.434],[2.762,2.867],[2.109,2.288],[1.601,1.833],[1.265,1.532],[1.012,1.275],[0.844,1.017],[0.612,0.733],[0.392,0.48],[0.308,0.405]],"le":72.6,"tfr":2.31,"gr":1.55,"mig":-0.5,"imr":17.6,"urb":51.8,"gdp":4603,"hx":5.7,"agr":31.3,"ind":18.7,"srv":50.0,"empY":2019,"inc":"UMC","reg":"LCN"},"GIN":{"c2":"gn","pop":14581541,"area":245720.0,"py":[[7.69,7.457],[6.918,6.728],[6.227,6.058],[5.486,5.349],[4.788,4.687],[4.253,4.196],[3.488,3.527],[2.642,2.788],[1.917,2.166],[1.479,1.771],[1.247,1.509],[1.051,1.274],[0.827,1.03],[0.597,0.786],[0.409,0.563],[0.253,0.357],[0.191,0.289]],"le":60.7,"tfr":4.22,"gr":2.44,"mig":-0.3,"imr":64.9,"urb":36.9,"gdp":1194,"hx":3.9,"agr":60.7,"ind":5.8,"srv":33.6,"empY":2019,"inc":"LIC","reg":"SSF"},"GNB":{"c2":"gw","pop":2177388,"area":28120.0,"py":[[6.958,6.763],[6.584,6.42],[6.21,6.08],[5.487,5.401],[4.733,4.69],[4.089,4.086],[3.489,3.51],[3.0,3.044],[2.487,2.554],[1.969,2.145],[1.478,1.684],[0.99,1.233],[0.713,1.035],[0.526,0.846],[0.359,0.573],[0.202,0.303],[0.141,0.219]],"le":64.1,"tfr":3.84,"gr":2.23,"mig":-0.7,"imr":48.7,"urb":44.2,"gdp":728,"hx":7.0,"agr":60.5,"ind":8.6,"srv":30.9,"empY":2019,"inc":"LIC","reg":"SSF"},"GUY":{"c2":"gy","pop":828632,"area":196850.0,"py":[[5.066,4.915],[5.001,4.858],[4.786,4.644],[4.39,4.24],[4.465,4.337],[4.526,4.603],[3.605,3.94],[2.714,3.084],[2.552,2.9],[2.553,2.879],[2.377,2.682],[2.113,2.399],[1.745,2.015],[1.217,1.515],[0.754,1.017],[0.465,0.649],[0.363,0.632]],"le":70.2,"tfr":2.41,"gr":0.55,"mig":-7.5,"imr":21.3,"urb":26.8,"gdp":6956,"hx":5.9,"agr":15.4,"ind":25.0,"srv":59.6,"empY":2019,"inc":"UMC","reg":"LCN"},"HTI":{"c2":"ht","pop":11705195,"area":27560.0,"py":[[5.322,5.213],[5.291,5.209],[5.21,5.144],[4.975,4.923],[4.683,4.675],[4.351,4.37],[4.029,4.069],[3.501,3.554],[2.931,2.991],[2.443,2.516],[1.97,2.069],[1.58,1.714],[1.218,1.387],[0.886,1.081],[0.572,0.767],[0.328,0.475],[0.208,0.346]],"le":64.9,"tfr":2.66,"gr":1.17,"mig":-2.7,"imr":43.2,"urb":57.1,"gdp":1177,"hx":7.7,"agr":29.0,"ind":6.7,"srv":64.3,"empY":2019,"inc":"LMC","reg":"LCN"},"HND":{"c2":"hn","pop":10735392,"area":111890.0,"py":[[5.437,5.189],[5.225,4.985],[5.105,4.866],[5.064,4.832],[5.025,4.818],[4.642,4.482],[4.123,4.002],[3.609,3.535],[3.146,3.105],[2.561,2.575],[1.922,2.007],[1.439,1.583],[1.109,1.26],[0.852,0.983],[0.585,0.71],[0.309,0.398],[0.195,0.323]],"le":72.9,"tfr":2.5,"gr":1.7,"mig":-0.5,"imr":12.9,"urb":58.4,"gdp":2406,"hx":7.0,"agr":29.5,"ind":21.4,"srv":49.1,"empY":2019,"inc":"LMC","reg":"LCN"},"HUN":{"c2":"hu","pop":9689722,"area":91260.0,"py":[[2.435,2.3],[2.517,2.388],[2.462,2.332],[2.652,2.516],[2.663,2.516],[3.045,2.867],[3.411,3.187],[3.303,3.116],[3.606,3.512],[4.474,4.385],[3.678,3.678],[3.101,3.283],[2.604,3.044],[2.816,3.704],[2.249,3.323],[1.501,2.515],[1.477,3.338]],"le":77.0,"tfr":1.49,"gr":0.07,"mig":5.1,"imr":3.2,"urb":71.9,"gdp":15899,"hx":6.7,"agr":4.7,"ind":32.1,"srv":63.2,"empY":2019,"inc":"HIC","reg":"ECS"},"ISL":{"c2":"is","pop":390740,"area":100830.0,"py":[[3.079,2.891],[2.927,2.746],[3.188,3.06],[3.233,3.086],[3.317,3.284],[4.026,3.762],[4.541,3.974],[3.891,3.365],[3.696,3.279],[3.191,2.953],[3.033,2.857],[2.834,2.833],[2.731,2.743],[2.448,2.446],[2.006,1.991],[1.466,1.542],[1.58,2.001]],"le":82.7,"tfr":1.54,"gr":1.64,"mig":11.9,"imr":1.0,"urb":93.9,"gdp":59261,"hx":8.5,"agr":4.0,"ind":17.5,"srv":78.5,"empY":2019,"inc":"HIC","reg":"ECS"},"IND":{"c2":"in","pop":1444436244,"area":2973190.0,"py":[[4.096,3.801],[4.304,3.95],[4.549,4.145],[4.634,4.21],[4.716,4.277],[4.501,4.086],[4.261,3.924],[3.986,3.688],[3.528,3.282],[3.039,2.876],[2.612,2.523],[2.201,2.158],[1.813,1.808],[1.407,1.448],[0.962,1.034],[0.52,0.605],[0.453,0.602]],"le":72.0,"tfr":1.98,"gr":0.89,"mig":-0.7,"imr":22.6,"urb":34.9,"gdp":1901,"hx":3.5,"agr":42.6,"ind":25.1,"srv":32.3,"empY":2019,"inc":"LMC","reg":"SAS"},"IDN":{"c2":"id","pop":282353644,"area":1877519.0,"py":[[4.054,3.839],[4.226,4.011],[4.431,4.207],[4.217,4.005],[3.978,3.784],[3.988,3.807],[3.816,3.642],[3.762,3.61],[3.714,3.608],[3.374,3.335],[3.021,3.045],[2.562,2.652],[1.996,2.151],[1.395,1.607],[0.842,1.062],[0.486,0.723],[0.372,0.677]],"le":71.1,"tfr":2.13,"gr":0.83,"mig":-0.1,"imr":17.1,"urb":56.6,"gdp":3870,"hx":2.9,"agr":28.5,"ind":22.4,"srv":49.1,"empY":2019,"inc":"LMC","reg":"EAS"},"IRN":{"c2":"ir","pop":91114777,"area":1628760.0,"py":[[3.422,3.251],[4.272,4.034],[3.942,3.721],[3.535,3.356],[3.261,3.115],[3.484,3.371],[4.543,4.372],[5.116,4.951],[4.551,4.365],[3.489,3.338],[2.965,2.829],[2.35,2.34],[1.976,1.981],[1.534,1.553],[1.219,1.214],[0.68,0.723],[0.487,0.661]],"le":77.7,"tfr":1.7,"gr":1.12,"mig":2.9,"imr":9.9,"urb":75.9,"gdp":2283,"hx":8.7,"agr":17.4,"ind":31.4,"srv":51.2,"empY":2019,"inc":"LMC","reg":"MEA"},"IRQ":{"c2":"iq","pop":45557903,"area":434128.0,"py":[[6.283,5.972],[6.304,5.997],[6.296,5.991],[5.299,5.056],[4.732,4.54],[4.235,4.107],[3.692,3.617],[3.027,3.016],[2.589,2.62],[2.237,2.293],[1.842,1.948],[1.379,1.565],[0.882,1.085],[0.569,0.754],[0.431,0.615],[0.234,0.359],[0.152,0.283]],"le":72.3,"tfr":3.25,"gr":2.15,"mig":-0.1,"imr":19.0,"urb":70.9,"gdp":4157,"hx":4.1,"agr":18.3,"ind":22.9,"srv":58.8,"empY":2019,"inc":"UMC","reg":"MEA"},"IRL":{"c2":"ie","pop":5227425,"area":68890.0,"py":[[2.841,2.701],[3.201,3.063],[3.569,3.411],[3.442,3.272],[3.236,3.15],[3.029,2.942],[2.982,2.975],[3.242,3.481],[3.833,4.102],[3.689,3.805],[3.374,3.426],[2.976,3.041],[2.686,2.791],[2.346,2.429],[1.948,2.054],[1.527,1.662],[1.579,2.194]],"le":82.4,"tfr":1.6,"gr":1.19,"mig":8.4,"imr":2.9,"urb":63.7,"gdp":83813,"hx":6.9,"agr":4.4,"ind":18.8,"srv":76.8,"empY":2019,"inc":"HIC","reg":"ECS"},"ISR":{"c2":"il","pop":9321817,"area":21640.0,"py":[[4.802,4.56],[4.819,4.561],[4.5,4.281],[4.052,3.861],[3.808,3.652],[3.483,3.363],[3.28,3.202],[3.122,3.111],[2.984,3.007],[2.839,2.889],[2.521,2.593],[2.099,2.181],[1.888,2.058],[1.72,1.947],[1.549,1.813],[1.132,1.396],[1.182,1.746]],"le":82.4,"tfr":2.83,"gr":1.42,"mig":1.1,"imr":2.8,"urb":92.6,"gdp":43611,"hx":7.5,"agr":0.9,"ind":17.2,"srv":81.9,"empY":2019,"inc":"HIC","reg":"MEA"},"ITA":{"c2":"it","pop":59435141,"area":297730.0,"py":[[1.766,1.671],[2.062,1.951],[2.346,2.215],[2.51,2.371],[2.622,2.437],[2.735,2.493],[2.863,2.744],[2.857,2.813],[3.157,3.122],[3.687,3.697],[3.963,4.052],[3.999,4.149],[3.546,3.768],[2.962,3.243],[2.606,2.958],[2.203,2.66],[2.973,4.798]],"le":83.7,"tfr":1.2,"gr":-0.22,"mig":2.5,"imr":2.2,"urb":71.0,"gdp":31676,"hx":8.7,"agr":3.9,"ind":25.9,"srv":70.2,"empY":2019,"inc":"HIC","reg":"ECS"},"JAM":{"c2":"jm","pop":2839822,"area":10830.0,"py":[[2.948,2.847],[3.136,3.026],[3.543,3.419],[4.035,3.899],[4.232,4.093],[4.707,4.56],[4.648,4.511],[4.212,4.103],[3.786,3.71],[3.243,3.27],[2.85,3.062],[2.51,2.909],[2.116,2.591],[1.49,1.878],[0.896,1.157],[0.622,0.802],[0.483,0.707]],"le":71.5,"tfr":1.36,"gr":0.0,"mig":-3.5,"imr":15.9,"urb":56.3,"gdp":4665,"hx":6.1,"agr":15.2,"ind":16.2,"srv":68.6,"empY":2019,"inc":"UMC","reg":"LCN"},"JPN":{"c2":"jp","pop":124071179,"area":364500.0,"py":[[1.679,1.597],[2.019,1.912],[2.225,2.103],[2.343,2.213],[2.506,2.381],[2.514,2.415],[2.512,2.415],[2.786,2.696],[3.075,3.013],[3.683,3.624],[3.979,3.905],[3.372,3.281],[3.059,3.021],[2.917,2.991],[3.258,3.558],[2.947,3.504],[3.925,6.574]],"le":84.7,"tfr":1.21,"gr":-0.48,"mig":1.4,"imr":1.6,"urb":91.8,"gdp":40113,"hx":11.0,"agr":3.4,"ind":24.2,"srv":72.4,"empY":2019,"inc":"HIC","reg":"EAS"},"JOR":{"c2":"jo","pop":11530943,"area":88780.0,"py":[[5.152,4.924],[5.244,5.011],[5.355,5.228],[4.878,4.857],[4.347,4.262],[4.504,4.17],[4.32,3.754],[3.745,3.293],[3.199,2.887],[2.782,2.49],[2.492,2.182],[2.012,1.773],[1.413,1.309],[0.926,0.905],[0.613,0.608],[0.348,0.384],[0.26,0.373]],"le":77.8,"tfr":2.64,"gr":1.6,"mig":-1.5,"imr":11.8,"urb":91.4,"gdp":4283,"hx":7.8,"agr":2.5,"ind":24.5,"srv":73.1,"empY":2019,"inc":"UMC","reg":"MEA"},"KAZ":{"c2":"kz","pop":20464208,"area":2699700.0,"py":[[5.322,5.053],[5.01,4.843],[4.721,4.526],[3.88,3.707],[2.992,2.877],[3.208,3.106],[3.874,3.794],[3.845,3.803],[3.221,3.287],[2.795,3.001],[2.472,2.779],[2.238,2.627],[2.039,2.505],[1.497,2.145],[0.881,1.456],[0.374,0.773],[0.326,1.023]],"le":74.4,"tfr":3.01,"gr":1.32,"mig":-0.2,"imr":8.1,"urb":57.7,"gdp":9056,"hx":2.9,"agr":14.9,"ind":21.0,"srv":64.2,"empY":2019,"inc":"UMC","reg":"ECS"},"KEN":{"c2":"ke","pop":55884494,"area":569140.0,"py":[[6.369,6.276],[6.142,6.057],[6.184,6.109],[5.74,5.748],[4.834,4.988],[4.004,4.228],[3.575,3.677],[3.199,3.14],[2.612,2.513],[2.061,2.011],[1.624,1.627],[1.235,1.284],[0.869,0.955],[0.555,0.653],[0.336,0.414],[0.211,0.272],[0.17,0.329]],"le":63.6,"tfr":3.21,"gr":1.97,"mig":-0.2,"imr":29.6,"urb":28.0,"gdp":1838,"hx":5.2,"agr":54.3,"ind":6.2,"srv":39.4,"empY":2019,"inc":"LMC","reg":"SSF"},"KIR":{"c2":"ki","pop":133527,"area":810.0,"py":[[6.28,5.924],[5.871,5.681],[5.502,5.577],[4.475,4.584],[4.168,4.094],[4.248,4.419],[3.712,4.046],[3.218,3.584],[2.688,2.982],[2.0,2.255],[1.717,2.08],[1.728,2.078],[1.284,1.632],[0.745,1.042],[0.446,0.717],[0.256,0.447],[0.163,0.357]],"le":66.5,"tfr":3.15,"gr":1.5,"mig":-3.7,"imr":43.1,"urb":55.6,"gdp":1671,"hx":12.1,"agr":null,"ind":null,"srv":null,"empY":null,"inc":"LMC","reg":"EAS"},"PRK":{"c2":"kp","pop":26460314,"area":120410.0,"py":[[3.316,3.14],[3.274,3.105],[3.136,2.983],[3.192,3.045],[3.519,3.375],[3.788,3.648],[3.769,3.654],[3.502,3.416],[3.224,3.167],[3.157,3.135],[4.065,4.102],[3.652,3.773],[2.714,2.897],[2.172,2.423],[1.18,1.481],[1.023,1.528],[0.766,1.68]],"le":73.6,"tfr":1.78,"gr":0.32,"mig":-0.1,"imr":14.5,"urb":62.4,"gdp":null,"hx":null,"agr":43.8,"ind":12.7,"srv":43.5,"empY":2019,"inc":"LIC","reg":"EAS"},"KOR":{"c2":"kr","pop":51738086,"area":97520.0,"py":[[1.299,1.231],[1.942,1.848],[2.274,2.151],[2.304,2.16],[2.93,2.668],[3.677,3.243],[3.682,3.204],[3.358,3.06],[4.031,3.822],[3.815,3.681],[4.35,4.264],[4.015,4.026],[4.047,4.14],[3.176,3.386],[2.039,2.321],[1.433,1.791],[1.553,3.078]],"le":84.3,"tfr":0.72,"gr":-0.04,"mig":1.7,"imr":2.1,"urb":81.4,"gdp":31489,"hx":7.6,"agr":5.1,"ind":24.6,"srv":70.3,"empY":2019,"inc":"HIC","reg":"EAS"},"KWT":{"c2":"kw","pop":4884143,"area":17820.0,"py":[[2.726,2.649],[3.258,3.108],[3.4,3.21],[2.965,2.796],[2.448,2.286],[5.779,2.989],[6.894,3.561],[8.325,4.476],[8.098,4.032],[6.127,3.252],[4.603,2.431],[3.151,1.632],[1.711,1.018],[0.866,0.628],[0.414,0.375],[0.199,0.23],[0.164,0.198]],"le":80.4,"tfr":1.52,"gr":1.88,"mig":10.3,"imr":7.2,"urb":100.0,"gdp":32373,"hx":5.0,"agr":1.8,"ind":22.1,"srv":76.1,"empY":2019,"inc":"HIC","reg":"MEA"},"KGZ":{"c2":"kg","pop":7130594,"area":191800.0,"py":[[5.604,5.306],[5.789,5.499],[5.315,5.019],[4.308,4.06],[3.629,3.721],[3.803,3.881],[3.894,3.959],[3.54,3.62],[2.877,2.969],[2.502,2.596],[2.225,2.384],[1.974,2.224],[1.699,2.057],[1.133,1.494],[0.664,0.942],[0.251,0.396],[0.234,0.434]],"le":71.7,"tfr":2.8,"gr":1.61,"mig":0.8,"imr":14.3,"urb":36.9,"gdp":1174,"hx":6.5,"agr":19.3,"ind":25.4,"srv":55.3,"empY":2019,"inc":"LMC","reg":"ECS"},"LAO":{"c2":"la","pop":7717674,"area":230800.0,"py":[[5.255,5.03],[5.253,5.05],[4.98,4.812],[4.828,4.687],[4.703,4.588],[4.487,4.412],[4.191,4.144],[3.757,3.672],[3.1,3.021],[2.513,2.489],[2.06,2.089],[1.684,1.8],[1.328,1.469],[0.955,1.045],[0.597,0.688],[0.325,0.416],[0.232,0.34]],"le":69.0,"tfr":2.42,"gr":1.38,"mig":-1.3,"imr":31.7,"urb":36.3,"gdp":2630,"hx":2.2,"agr":61.4,"ind":12.9,"srv":25.6,"empY":2019,"inc":"LMC","reg":"EAS"},"LVA":{"c2":"lv","pop":1879693,"area":62090.0,"py":[[2.324,2.187],[2.983,2.754],[2.722,2.568],[2.764,2.639],[2.432,2.312],[2.4,2.212],[3.399,3.189],[3.801,3.604],[3.427,3.359],[3.259,3.407],[3.312,3.618],[3.084,3.58],[3.13,4.009],[2.603,3.746],[1.894,3.287],[1.233,2.574],[1.571,4.618]],"le":76.2,"tfr":1.34,"gr":-0.29,"mig":4.2,"imr":2.9,"urb":68.3,"gdp":17620,"hx":6.2,"agr":7.3,"ind":23.7,"srv":69.0,"empY":2019,"inc":"HIC","reg":"ECS"},"LBN":{"c2":"lb","pop":5785791,"area":10230.0,"py":[[4.008,3.789],[4.56,4.32],[5.014,4.787],[4.663,4.303],[4.297,3.871],[3.499,3.62],[2.725,3.393],[2.862,3.246],[2.841,3.21],[2.537,2.994],[2.581,2.954],[2.547,2.877],[2.103,2.414],[1.654,1.955],[1.3,1.382],[0.803,1.041],[0.63,1.22]],"le":77.8,"tfr":2.24,"gr":0.43,"mig":-5.9,"imr":15.7,"urb":88.9,"gdp":4891,"hx":8.4,"agr":11.3,"ind":23.6,"srv":65.1,"empY":2019,"inc":"UMC","reg":"MEA"},"LSO":{"c2":"ls","pop":2324448,"area":30360.0,"py":[[5.737,5.647],[5.994,5.927],[5.729,5.693],[5.154,5.143],[4.696,4.734],[4.321,4.426],[4.264,4.427],[3.827,4.054],[2.745,2.986],[1.805,1.943],[1.258,1.382],[1.011,1.275],[0.816,1.164],[0.601,0.944],[0.349,0.664],[0.204,0.42],[0.199,0.462]],"le":57.4,"tfr":2.69,"gr":1.12,"mig":-2.2,"imr":56.1,"urb":29.0,"gdp":861,"hx":9.3,"agr":44.3,"ind":13.3,"srv":42.4,"empY":2019,"inc":"LMC","reg":"SSF"},"LBR":{"c2":"lr","pop":5553392,"area":96320.0,"py":[[7.09,6.905],[6.654,6.492],[6.386,6.236],[5.752,5.634],[4.725,4.659],[3.786,3.772],[3.145,3.171],[2.813,2.854],[2.435,2.492],[1.963,2.044],[1.513,1.637],[1.208,1.353],[0.927,1.06],[0.658,0.77],[0.423,0.506],[0.257,0.299],[0.176,0.202]],"le":62.2,"tfr":3.95,"gr":2.2,"mig":-0.9,"imr":55.6,"urb":52.1,"gdp":583,"hx":6.7,"agr":42.6,"ind":10.1,"srv":47.2,"empY":2019,"inc":"LIC","reg":"SSF"},"LBY":{"c2":"ly","pop":7342540,"area":1759540.0,"py":[[4.456,4.223],[4.835,4.586],[4.916,4.661],[4.724,4.445],[4.171,3.97],[3.788,3.626],[3.644,3.455],[3.726,3.55],[3.917,3.694],[3.665,3.515],[3.072,2.99],[2.149,2.197],[1.515,1.561],[0.885,0.961],[0.615,0.739],[0.388,0.507],[0.379,0.476]],"le":69.3,"tfr":2.35,"gr":1.01,"mig":-0.3,"imr":16.0,"urb":80.7,"gdp":3699,"hx":6.1,"agr":16.4,"ind":24.4,"srv":59.2,"empY":2019,"inc":"UMC","reg":"MEA"},"LIE":{"c2":"li","pop":39736,"area":160.0,"py":[[2.423,2.242],[2.567,2.232],[2.572,2.29],[2.582,2.406],[2.67,2.642],[3.005,2.892],[3.118,3.105],[3.184,3.264],[3.251,3.204],[3.335,3.289],[3.805,3.828],[3.933,4.168],[3.712,3.873],[3.0,3.158],[2.496,2.564],[2.046,2.222],[1.976,2.944]],"le":83.6,"tfr":1.54,"gr":0.7,"mig":5.4,"imr":5.6,"urb":14.4,"gdp":180367,"hx":null,"agr":null,"ind":null,"srv":null,"empY":null,"inc":"HIC","reg":"ECS"},"LTU":{"c2":"lt","pop":2866813,"area":62630.0,"py":[[2.245,2.129],[2.719,2.574],[2.622,2.503],[2.495,2.423],[2.848,2.741],[3.339,3.099],[3.927,3.495],[3.775,3.315],[3.285,2.963],[3.207,3.161],[3.387,3.558],[3.237,3.688],[3.249,4.083],[2.461,3.54],[1.747,3.005],[1.115,2.321],[1.528,4.219]],"le":76.0,"tfr":1.2,"gr":0.89,"mig":15.7,"imr":2.8,"urb":68.0,"gdp":19998,"hx":6.6,"agr":6.4,"ind":25.7,"srv":67.9,"empY":2019,"inc":"HIC","reg":"ECS"},"LUX":{"c2":"lu","pop":669204,"area":2430.0,"py":[[2.603,2.524],[2.731,2.594],[2.734,2.598],[2.68,2.505],[2.88,2.702],[3.761,3.555],[4.134,3.916],[3.986,3.917],[3.864,3.803],[3.646,3.555],[3.613,3.437],[3.633,3.341],[3.039,2.933],[2.332,2.394],[1.803,1.934],[1.33,1.497],[1.554,2.471]],"le":82.2,"tfr":1.4,"gr":1.24,"mig":8.9,"imr":4.4,"urb":91.5,"gdp":115874,"hx":5.3,"agr":0.7,"ind":10.8,"srv":88.5,"empY":2019,"inc":"HIC","reg":"ECS"},"MDG":{"c2":"mg","pop":31578390,"area":581800.0,"py":[[7.426,7.218],[6.55,6.379],[5.993,5.855],[5.38,5.287],[4.813,4.753],[4.214,4.177],[3.381,3.359],[2.752,2.743],[2.353,2.366],[1.982,2.008],[1.587,1.626],[1.211,1.26],[0.949,1.009],[0.71,0.778],[0.48,0.545],[0.218,0.269],[0.157,0.213]],"le":63.6,"tfr":3.97,"gr":2.45,"mig":-0.0,"imr":44.9,"urb":38.5,"gdp":495,"hx":4.8,"agr":64.1,"ind":8.7,"srv":27.1,"empY":2019,"inc":"LIC","reg":"SSF"},"MWI":{"c2":"mw","pop":21376132,"area":94280.0,"py":[[7.281,7.242],[6.718,6.711],[6.503,6.555],[5.879,5.979],[4.818,4.92],[3.981,4.142],[3.251,3.614],[2.692,3.177],[2.34,2.567],[1.731,1.677],[1.142,1.239],[0.787,1.065],[0.601,0.801],[0.426,0.528],[0.285,0.386],[0.198,0.308],[0.156,0.301]],"le":67.4,"tfr":3.65,"gr":2.57,"mig":-0.3,"imr":29.5,"urb":17.4,"gdp":625,"hx":9.3,"agr":76.4,"ind":5.4,"srv":18.3,"empY":2019,"inc":"LIC","reg":"SSF"},"MYS":{"c2":"my","pop":35344242,"area":328550.0,"py":[[3.254,3.067],[4.016,3.817],[4.101,3.77],[4.164,3.834],[4.625,4.126],[4.834,4.06],[4.903,4.056],[4.678,3.991],[4.133,3.522],[3.229,2.875],[2.639,2.479],[2.223,2.176],[1.934,1.901],[1.473,1.498],[1.054,1.114],[0.601,0.67],[0.52,0.66]],"le":76.7,"tfr":1.55,"gr":1.24,"mig":5.2,"imr":6.4,"urb":77.2,"gdp":10402,"hx":3.8,"agr":10.3,"ind":27.0,"srv":62.7,"empY":2019,"inc":"UMC","reg":"EAS"},"MDV":{"c2":"mv","pop":526844,"area":300.0,"py":[[2.978,2.744],[3.552,3.12],[4.04,3.417],[3.17,2.758],[3.848,2.456],[7.824,3.314],[9.462,3.974],[8.583,4.013],[6.167,3.039],[3.905,2.248],[2.721,1.907],[1.919,1.548],[1.503,1.305],[1.014,0.887],[0.538,0.496],[0.4,0.353],[0.402,0.396]],"le":81.0,"tfr":1.58,"gr":0.32,"mig":-5.5,"imr":4.3,"urb":40.7,"gdp":7456,"hx":9.4,"agr":8.3,"ind":19.1,"srv":72.6,"empY":2019,"inc":"UMC","reg":"SAS"},"MLI":{"c2":"ml","pop":24122346,"area":1220190.0,"py":[[8.8,8.612],[7.784,7.62],[6.83,6.668],[5.73,5.585],[4.56,4.436],[3.556,3.456],[2.959,2.878],[2.556,2.472],[2.162,2.094],[1.685,1.641],[1.227,1.208],[0.874,0.89],[0.641,0.682],[0.473,0.53],[0.326,0.384],[0.19,0.238],[0.108,0.146]],"le":60.4,"tfr":5.61,"gr":2.97,"mig":-1.7,"imr":60.3,"urb":43.9,"gdp":859,"hx":3.9,"agr":62.4,"ind":7.6,"srv":30.0,"empY":2019,"inc":"LIC","reg":"SSF"},"MLT":{"c2":"mt","pop":536394,"area":320.0,"py":[[2.133,1.987],[2.371,2.189],[2.279,2.147],[2.174,2.003],[2.506,2.233],[3.981,3.161],[5.078,4.249],[4.877,4.005],[4.409,3.699],[3.871,3.317],[3.175,2.811],[2.804,2.624],[2.975,2.888],[2.827,2.839],[2.48,2.634],[2.202,2.524],[1.743,2.805]],"le":83.3,"tfr":1.1,"gr":1.29,"mig":12.4,"imr":6.2,"urb":94.7,"gdp":27885,"hx":9.0,"agr":1.0,"ind":18.9,"srv":80.1,"empY":2019,"inc":"HIC","reg":"MEA"},"MHL":{"c2":"mh","pop":38182,"area":180.0,"py":[[5.691,5.298],[5.783,5.529],[6.443,5.998],[6.459,5.788],[4.468,3.884],[2.648,2.517],[2.355,2.467],[3.135,3.198],[3.24,3.276],[2.844,2.75],[2.42,2.355],[2.045,1.938],[1.495,1.454],[1.103,1.074],[0.707,0.691],[0.325,0.312],[0.11,0.202]],"le":66.9,"tfr":2.92,"gr":-3.32,"mig":-47.2,"imr":22.1,"urb":77.8,"gdp":4073,"hx":17.6,"agr":null,"ind":null,"srv":null,"empY":null,"inc":"UMC","reg":"EAS"},"MRT":{"c2":"mr","pop":5096521,"area":1030700.0,"py":[[8.019,7.821],[7.212,7.049],[6.474,6.3],[5.404,5.415],[4.342,4.546],[3.603,3.896],[2.996,3.318],[2.499,2.814],[2.019,2.327],[1.645,1.924],[1.38,1.58],[1.105,1.255],[0.863,0.973],[0.629,0.715],[0.413,0.481],[0.245,0.301],[0.187,0.25]],"le":68.5,"tfr":4.7,"gr":2.95,"mig":0.6,"imr":30.8,"urb":55.3,"gdp":1673,"hx":4.6,"agr":30.8,"ind":17.6,"srv":51.6,"empY":2019,"inc":"LMC","reg":"SSF"},"MUS":{"c2":"mu","pop":1272517,"area":2030.0,"py":[[2.338,2.401],[2.38,2.415],[2.664,2.761],[3.407,3.468],[3.736,3.628],[4.058,3.74],[4.375,3.943],[3.808,3.43],[3.993,3.752],[3.686,3.596],[3.146,3.118],[3.302,3.35],[3.044,3.224],[2.421,2.631],[1.772,2.063],[0.98,1.269],[0.832,1.269]],"le":74.9,"tfr":1.24,"gr":-0.17,"mig":-2.2,"imr":12.9,"urb":40.8,"gdp":8623,"hx":5.8,"agr":6.0,"ind":23.7,"srv":70.3,"empY":2019,"inc":"UMC","reg":"SSF"},"MEX":{"c2":"mx","pop":130308399,"area":1943950.0,"py":[[4.011,3.871],[4.163,4.019],[4.401,4.253],[4.341,4.215],[4.273,4.215],[4.035,4.096],[3.847,4.051],[3.448,3.774],[3.041,3.539],[2.776,3.294],[2.559,3.002],[2.193,2.573],[1.78,2.115],[1.347,1.621],[0.962,1.183],[0.64,0.817],[0.676,0.868]],"le":75.1,"tfr":1.91,"gr":0.88,"mig":-0.8,"imr":10.3,"urb":80.7,"gdp":8347,"hx":5.4,"agr":12.5,"ind":25.5,"srv":62.0,"empY":2019,"inc":"UMC","reg":"LCN"},"FSM":{"c2":"fm","pop":112893,"area":700.0,"py":[[5.538,5.201],[5.44,5.111],[5.518,5.218],[5.143,5.154],[4.917,4.769],[4.547,4.454],[3.813,3.611],[2.806,2.629],[2.284,2.48],[2.117,2.185],[1.865,2.18],[1.731,2.055],[1.537,1.859],[1.21,1.526],[0.741,0.99],[0.331,0.498],[0.152,0.388]],"le":67.2,"tfr":2.75,"gr":0.47,"mig":-10.1,"imr":18.8,"urb":22.9,"gdp":3585,"hx":12.6,"agr":null,"ind":null,"srv":null,"empY":null,"inc":"LMC","reg":"EAS"},"MDA":{"c2":"md","pop":3053416,"area":32885.3,"py":[[2.937,2.769],[3.757,3.533],[3.494,3.415],[2.959,3.047],[2.453,2.479],[2.617,2.755],[3.534,3.678],[4.123,4.225],[3.379,3.699],[2.979,3.443],[2.712,3.28],[2.578,3.309],[2.918,4.043],[2.456,3.745],[1.836,3.196],[0.691,1.4],[0.6,1.962]],"le":71.2,"tfr":1.73,"gr":-0.89,"mig":-6.1,"imr":11.7,"urb":42.8,"gdp":4551,"hx":6.6,"agr":21.0,"ind":21.7,"srv":57.3,"empY":2019,"inc":"UMC","reg":"ECS"},"MCO":{"c2":"mc","pop":38777,"area":2.0,"py":[[2.38,2.28],[2.311,2.269],[2.06,2.022],[2.068,1.947],[2.385,2.282],[2.437,2.349],[2.298,2.226],[2.285,2.244],[2.063,2.347],[2.06,2.339],[2.416,2.674],[3.273,3.391],[3.67,3.67],[3.546,3.479],[3.159,2.989],[3.136,3.177],[7.388,9.379]],"le":86.4,"tfr":2.11,"gr":-0.92,"mig":2.3,"imr":3.9,"urb":100.0,"gdp":190513,"hx":1.6,"agr":null,"ind":null,"srv":null,"empY":null,"inc":"HIC","reg":"ECS"},"MNG":{"c2":"mn","pop":3454270,"area":1557255.0,"py":[[5.137,4.922],[6.022,5.66],[5.538,5.189],[3.886,3.626],[3.195,3.005],[3.516,3.342],[4.03,3.849],[4.156,4.035],[3.377,3.331],[2.993,3.036],[2.483,2.697],[2.025,2.388],[1.567,2.001],[0.954,1.361],[0.464,0.733],[0.277,0.47],[0.251,0.484]],"le":71.7,"tfr":2.68,"gr":1.3,"mig":0.0,"imr":10.5,"urb":68.7,"gdp":4007,"hx":3.8,"agr":25.3,"ind":21.6,"srv":53.1,"empY":2019,"inc":"LMC","reg":"EAS"},"MNE":{"c2":"me","pop":639435,"area":13450.0,"py":[[2.99,2.787],[3.17,2.924],[3.292,3.077],[3.136,2.989],[3.138,3.058],[3.096,3.017],[3.051,2.99],[3.374,3.326],[3.47,3.6],[3.219,3.518],[3.005,3.347],[3.029,3.321],[2.998,3.435],[2.799,3.232],[2.112,2.781],[1.094,1.761],[1.151,2.712]],"le":77.1,"tfr":1.8,"gr":1.86,"mig":18.9,"imr":1.7,"urb":67.5,"gdp":7686,"hx":8.4,"agr":7.2,"ind":19.4,"srv":73.4,"empY":2019,"inc":"UMC","reg":"ECS"},"MAR":{"c2":"ma","pop":37901284,"area":446300.0,"py":[[4.263,4.084],[4.414,4.193],[4.568,4.324],[4.261,4.074],[3.958,3.755],[3.865,3.701],[3.937,3.766],[3.78,3.708],[3.468,3.439],[3.065,3.088],[2.686,2.689],[2.329,2.413],[2.064,2.124],[1.683,1.676],[1.102,1.158],[0.581,0.73],[0.408,0.645]],"le":75.3,"tfr":2.23,"gr":1.0,"mig":-1.1,"imr":14.3,"urb":63.5,"gdp":3009,"hx":5.3,"agr":33.2,"ind":23.1,"srv":43.7,"empY":2019,"inc":"LMC","reg":"MEA"},"MOZ":{"c2":"mz","pop":34129694,"area":786380.0,"py":[[8.437,8.347],[7.402,7.34],[6.572,6.538],[5.405,5.421],[4.62,4.707],[3.829,3.985],[3.094,3.314],[2.436,2.736],[1.878,2.231],[1.398,1.754],[1.203,1.38],[0.815,1.004],[0.49,0.899],[0.365,0.82],[0.276,0.576],[0.165,0.293],[0.11,0.158]],"le":63.6,"tfr":4.76,"gr":2.94,"mig":-1.1,"imr":49.5,"urb":37.1,"gdp":449,"hx":8.2,"agr":70.2,"ind":8.6,"srv":21.2,"empY":2019,"inc":"LIC","reg":"SSF"},"MMR":{"c2":"mm","pop":54320481,"area":652790.0,"py":[[4.182,3.949],[4.225,4.002],[4.126,3.929],[4.147,3.968],[4.228,4.076],[4.099,3.989],[3.946,3.866],[3.838,3.787],[3.596,3.59],[3.19,3.237],[2.831,2.94],[2.404,2.59],[1.906,2.166],[1.405,1.716],[0.91,1.218],[0.455,0.666],[0.302,0.523]],"le":66.9,"tfr":2.12,"gr":0.69,"mig":-0.6,"imr":31.8,"urb":31.1,"gdp":1400,"hx":4.8,"agr":48.8,"ind":16.9,"srv":34.2,"empY":2019,"inc":"LMC","reg":"EAS"},"NAM":{"c2":"na","pop":2998153,"area":823290.0,"py":[[6.791,6.797],[6.293,6.351],[5.391,5.49],[4.709,4.661],[4.405,4.349],[4.21,4.288],[3.907,4.128],[3.146,3.319],[2.623,2.742],[2.184,2.225],[1.673,1.803],[1.225,1.452],[0.936,1.289],[0.604,0.871],[0.374,0.604],[0.22,0.403],[0.144,0.394]],"le":67.4,"tfr":3.21,"gr":2.37,"mig":3.9,"imr":27.2,"urb":52.0,"gdp":4211,"hx":8.0,"agr":21.9,"ind":16.4,"srv":61.8,"empY":2019,"inc":"UMC","reg":"SSF"},"NRU":{"c2":"nr","pop":11905,"area":20.0,"py":[[6.317,6.191],[6.569,6.065],[6.703,6.224],[5.267,4.62],[3.679,3.679],[3.805,3.503],[4.124,3.62],[3.889,3.847],[3.268,3.091],[2.108,2.159],[1.705,1.604],[1.537,1.453],[0.907,1.285],[0.563,1.016],[0.336,0.487],[0.092,0.176],[0.067,0.042]],"le":62.1,"tfr":3.33,"gr":0.51,"mig":-12.5,"imr":20.5,"urb":100.0,"gdp":10983,"hx":9.6,"agr":null,"ind":null,"srv":null,"empY":null,"inc":"HIC","reg":"EAS"},"NPL":{"c2":"np","pop":29673950,"area":143350.0,"py":[[4.808,4.578],[4.942,4.575],[5.006,4.706],[5.017,4.979],[4.731,5.082],[4.138,4.829],[3.343,4.236],[2.849,3.733],[2.613,3.244],[2.317,2.719],[2.104,2.356],[1.678,1.9],[1.481,1.59],[1.199,1.315],[0.873,1.016],[0.536,0.662],[0.351,0.491]],"le":70.4,"tfr":1.98,"gr":-0.14,"mig":-13.8,"imr":21.9,"urb":20.6,"gdp":1155,"hx":5.8,"agr":64.4,"ind":15.1,"srv":20.5,"empY":2019,"inc":"LMC","reg":"SAS"},"NLD":{"c2":"nl","pop":18165554,"area":33670.0,"py":[[2.507,2.39],[2.545,2.426],[2.668,2.539],[2.855,2.741],[3.311,3.205],[3.398,3.321],[3.455,3.362],[3.229,3.162],[3.002,2.99],[2.891,2.914],[3.443,3.463],[3.556,3.548],[3.362,3.403],[2.875,2.957],[2.476,2.607],[2.097,2.339],[2.005,2.957]],"le":82.2,"tfr":1.43,"gr":0.81,"mig":8.0,"imr":3.4,"urb":92.2,"gdp":52304,"hx":10.0,"agr":2.1,"ind":16.1,"srv":81.8,"empY":2019,"inc":"HIC","reg":"ECS"},"NZL":{"c2":"nz","pop":5194315,"area":263310.0,"py":[[2.939,2.795],[3.106,2.936],[3.314,3.147],[3.23,3.069],[3.241,3.067],[3.501,3.279],[3.824,3.745],[3.443,3.501],[3.126,3.174],[2.922,3.006],[3.149,3.294],[2.987,3.15],[2.925,3.136],[2.497,2.687],[2.091,2.244],[1.626,1.795],[1.755,2.298]],"le":82.1,"tfr":1.67,"gr":0.83,"mig":4.1,"imr":4.3,"urb":86.7,"gdp":41792,"hx":9.2,"agr":5.8,"ind":19.3,"srv":74.9,"empY":2019,"inc":"HIC","reg":"EAS"},"NIC":{"c2":"ni","pop":6870070,"area":120340.0,"py":[[4.848,4.699],[4.926,4.78],[4.936,4.796],[4.788,4.66],[4.556,4.446],[4.436,4.361],[4.139,4.193],[3.574,3.799],[3.046,3.34],[2.611,2.828],[2.156,2.334],[1.67,1.892],[1.235,1.497],[0.9,1.158],[0.66,0.911],[0.388,0.56],[0.313,0.562]],"le":74.9,"tfr":2.22,"gr":1.36,"mig":-1.2,"imr":12.3,"urb":59.0,"gdp":1905,"hx":8.6,"agr":30.6,"ind":16.2,"srv":53.2,"empY":2019,"inc":"LMC","reg":"LCN"},"NER":{"c2":"ne","pop":26592439,"area":1266700.0,"py":[[9.018,8.743],[7.882,7.625],[6.88,6.641],[5.762,5.557],[4.655,4.482],[3.656,3.511],[2.86,2.739],[2.323,2.217],[1.94,1.84],[1.56,1.487],[1.245,1.211],[1.007,0.997],[0.784,0.797],[0.563,0.592],[0.363,0.397],[0.182,0.247],[0.094,0.144]],"le":61.2,"tfr":6.06,"gr":3.31,"mig":0.0,"imr":64.0,"urb":16.6,"gdp":565,"hx":7.3,"agr":72.5,"ind":6.7,"srv":20.8,"empY":2019,"inc":"LIC","reg":"SSF"},"NGA":{"c2":"ng","pop":230271141,"area":910770.0,"py":[[7.399,7.218],[7.005,6.812],[6.523,6.305],[5.676,5.466],[4.73,4.561],[3.863,3.735],[3.239,3.142],[2.763,2.697],[2.413,2.357],[1.976,1.943],[1.504,1.502],[1.155,1.178],[0.875,0.924],[0.631,0.686],[0.41,0.459],[0.245,0.271],[0.155,0.18]],"le":54.5,"tfr":4.48,"gr":2.1,"mig":-0.3,"imr":68.8,"urb":52.0,"gdp":2097,"hx":3.9,"agr":35.0,"ind":12.0,"srv":53.0,"empY":2019,"inc":"LMC","reg":"SSF"},"MKD":{"c2":"mk","pop":1827512,"area":25220.0,"py":[[2.645,2.455],[2.993,2.877],[3.048,2.952],[2.834,2.762],[2.943,2.89],[3.104,3.003],[3.327,3.276],[3.408,3.426],[3.516,3.565],[3.417,3.527],[3.264,3.468],[3.332,3.555],[3.197,3.455],[2.949,3.278],[2.258,2.844],[1.306,1.908],[1.099,2.12]],"le":77.4,"tfr":1.46,"gr":-0.47,"mig":-3.1,"imr":4.7,"urb":58.5,"gdp":5888,"hx":6.6,"agr":13.9,"ind":31.1,"srv":55.0,"empY":2019,"inc":"UMC","reg":"ECS"},"NOR":{"c2":"no","pop":5549779,"area":365107.8,"py":[[2.542,2.418],[2.809,2.646],[3.031,2.881],[3.089,2.932],[3.142,2.98],[3.429,3.257],[3.664,3.516],[3.508,3.371],[3.347,3.187],[3.277,3.143],[3.5,3.356],[3.349,3.208],[2.924,2.851],[2.628,2.657],[2.275,2.352],[1.987,2.151],[1.891,2.704]],"le":83.3,"tfr":1.4,"gr":1.11,"mig":9.7,"imr":1.9,"urb":83.0,"gdp":67294,"hx":10.0,"agr":2.0,"ind":19.4,"srv":78.5,"empY":2019,"inc":"HIC","reg":"ECS"},"OMN":{"c2":"om","pop":5165144,"area":309500.0,"py":[[4.177,4.026],[4.702,4.521],[3.835,3.697],[2.844,2.718],[5.139,2.83],[7.302,3.347],[8.57,3.815],[8.725,3.726],[6.406,2.939],[4.045,2.067],[2.573,1.253],[1.553,0.891],[0.931,0.725],[0.501,0.499],[0.351,0.362],[0.225,0.246],[0.202,0.259]],"le":80.0,"tfr":2.53,"gr":4.59,"mig":31.0,"imr":8.6,"urb":86.3,"gdp":15343,"hx":4.1,"agr":4.0,"ind":32.0,"srv":64.0,"empY":2019,"inc":"HIC","reg":"MEA"},"PAK":{"c2":"pk","pop":249335590,"area":770880.0,"py":[[6.547,6.254],[6.21,5.946],[6.11,5.832],[5.374,5.103],[4.794,4.567],[4.132,3.926],[3.613,3.44],[3.078,2.983],[2.548,2.5],[2.05,2.023],[1.701,1.705],[1.441,1.468],[1.178,1.239],[0.856,0.94],[0.531,0.62],[0.341,0.41],[0.238,0.304]],"le":67.6,"tfr":3.61,"gr":1.48,"mig":-6.5,"imr":49.2,"urb":37.2,"gdp":1194,"hx":3.2,"agr":36.9,"ind":25.0,"srv":38.1,"empY":2019,"inc":"LMC","reg":"SAS"},"PLW":{"c2":"pw","pop":17707,"area":460.0,"py":[[2.835,2.683],[3.236,2.875],[3.547,3.23],[3.36,3.309],[2.824,2.598],[3.213,2.507],[4.558,3.157],[4.382,3.168],[4.586,3.163],[4.563,3.479],[4.45,3.445],[3.925,3.422],[3.253,3.134],[2.434,2.445],[1.48,1.689],[0.762,0.915],[0.469,0.904]],"le":69.3,"tfr":1.91,"gr":-0.23,"mig":-1.1,"imr":18.1,"urb":81.0,"gdp":14908,"hx":10.9,"agr":null,"ind":null,"srv":null,"empY":null,"inc":"HIC","reg":"EAS"},"PAN":{"c2":"pa","pop":4487488,"area":74177.0,"py":[[4.081,3.873],[4.435,4.2],[4.342,4.148],[4.156,3.984],[4.035,3.89],[3.899,3.801],[3.739,3.68],[3.582,3.536],[3.299,3.28],[3.027,3.036],[2.813,2.865],[2.451,2.545],[1.991,2.107],[1.524,1.649],[1.119,1.277],[0.742,0.914],[0.772,1.207]],"le":79.6,"tfr":2.12,"gr":1.29,"mig":1.6,"imr":12.6,"urb":68.4,"gdp":12269,"hx":7.3,"agr":14.4,"ind":17.7,"srv":67.9,"empY":2019,"inc":"UMC","reg":"LCN"},"PNG":{"c2":"pg","pop":10483061,"area":452860.0,"py":[[6.07,5.672],[5.83,5.418],[5.559,5.093],[5.207,4.704],[4.827,4.383],[4.39,4.07],[3.967,3.803],[3.431,3.461],[2.89,2.979],[2.481,2.534],[2.063,2.053],[1.69,1.588],[1.29,1.141],[0.841,0.745],[0.489,0.471],[0.264,0.255],[0.16,0.179]],"le":66.1,"tfr":3.1,"gr":1.8,"mig":-0.1,"imr":32.1,"urb":13.3,"gdp":2637,"hx":2.4,"agr":56.2,"ind":13.2,"srv":30.6,"empY":2019,"inc":"LMC","reg":"EAS"},"PRY":{"c2":"py","pop":6886766,"area":397300.0,"py":[[5.034,4.809],[5.012,4.791],[4.626,4.425],[4.331,4.155],[4.305,4.155],[4.407,4.285],[4.225,4.132],[3.833,3.762],[3.181,3.139],[2.533,2.52],[2.226,2.25],[1.992,2.096],[1.575,1.752],[1.137,1.306],[0.797,0.945],[0.513,0.663],[0.415,0.673]],"le":73.8,"tfr":2.42,"gr":1.25,"mig":-1.8,"imr":14.0,"urb":62.2,"gdp":4950,"hx":6.7,"agr":18.7,"ind":18.1,"srv":63.1,"empY":2019,"inc":"UMC","reg":"LCN"},"PER":{"c2":"pe","pop":34034890,"area":1280000.0,"py":[[4.023,3.877],[4.057,3.914],[4.215,4.07],[4.314,4.196],[4.103,4.072],[4.008,4.117],[3.936,4.081],[3.709,3.798],[3.312,3.366],[3.045,3.039],[2.718,2.682],[2.253,2.249],[1.832,1.904],[1.464,1.577],[1.125,1.266],[0.777,0.907],[0.847,1.146]],"le":77.7,"tfr":1.98,"gr":1.12,"mig":0.7,"imr":11.7,"urb":78.3,"gdp":6127,"hx":5.2,"agr":27.4,"ind":15.2,"srv":57.4,"empY":2019,"inc":"UMC","reg":"LCN"},"PHL":{"c2":"ph","pop":115371047,"area":298170.0,"py":[[4.187,3.929],[5.023,4.878],[5.191,5.03],[4.928,4.805],[4.686,4.631],[4.44,4.384],[4.106,4.012],[3.538,3.448],[3.126,3.091],[2.648,2.648],[2.307,2.351],[1.927,2.048],[1.544,1.719],[1.099,1.331],[0.672,0.908],[0.299,0.511],[0.159,0.396]],"le":69.8,"tfr":1.92,"gr":0.83,"mig":-1.4,"imr":20.7,"urb":47.4,"gdp":3299,"hx":4.4,"agr":22.9,"ind":19.1,"srv":58.0,"empY":2019,"inc":"LMC","reg":"EAS"},"POL":{"c2":"pl","pop":38711738,"area":306170.0,"py":[[2.305,2.178],[2.601,2.465],[2.78,2.641],[2.613,2.487],[2.448,2.343],[2.948,2.821],[3.532,3.386],[4.11,3.973],[4.288,4.175],[3.871,3.816],[3.216,3.239],[2.795,2.911],[2.948,3.272],[2.954,3.597],[2.372,3.223],[1.36,2.091],[1.316,2.926]],"le":78.6,"tfr":1.3,"gr":-0.26,"mig":-0.2,"imr":3.2,"urb":60.0,"gdp":15656,"hx":6.3,"agr":9.1,"ind":32.1,"srv":58.7,"empY":2019,"inc":"HIC","reg":"ECS"},"PRT":{"c2":"pt","pop":10430651,"area":91605.6,"py":[[2.096,1.985],[2.148,2.048],[2.325,2.233],[2.541,2.434],[2.75,2.625],[2.687,2.573],[2.713,2.69],[2.822,2.908],[3.274,3.495],[3.723,4.031],[3.541,3.885],[3.373,3.805],[3.231,3.727],[2.981,3.5],[2.682,3.22],[2.149,2.794],[2.603,4.409]],"le":82.4,"tfr":1.51,"gr":-0.0,"mig":2.8,"imr":2.6,"urb":66.3,"gdp":22440,"hx":9.4,"agr":5.5,"ind":24.7,"srv":69.8,"empY":2019,"inc":"HIC","reg":"ECS"},"QAT":{"c2":"qa","pop":3012452,"area":11490.0,"py":[[2.615,2.486],[2.751,2.589],[2.404,2.28],[2.038,1.807],[3.485,1.523],[9.191,2.465],[12.067,3.781],[12.361,3.73],[9.615,2.856],[6.165,1.909],[4.102,1.219],[2.299,0.794],[1.278,0.521],[0.579,0.316],[0.234,0.179],[0.112,0.094],[0.08,0.073]],"le":82.4,"tfr":1.73,"gr":2.24,"mig":13.4,"imr":4.2,"urb":99.2,"gdp":50805,"hx":2.5,"agr":1.2,"ind":53.7,"srv":45.1,"empY":2019,"inc":"HIC","reg":"MEA"},"ROU":{"c2":"ro","pop":19067838,"area":230080.0,"py":[[2.531,2.405],[2.754,2.634],[2.799,2.68],[2.917,2.8],[2.676,2.566],[2.692,2.576],[3.09,2.927],[3.62,3.4],[3.53,3.289],[4.049,3.908],[3.95,3.915],[3.406,3.552],[2.522,2.924],[2.759,3.621],[2.288,3.282],[1.369,2.161],[1.484,2.925]],"le":75.9,"tfr":1.71,"gr":-0.53,"mig":-1.5,"imr":4.8,"urb":54.2,"gdp":12896,"hx":5.6,"agr":21.2,"ind":30.1,"srv":48.7,"empY":2019,"inc":"UMC","reg":"ECS"},"RUS":{"c2":"ru","pop":145205581,"area":16376870.0,"py":[[2.489,2.357],[3.239,3.066],[3.208,3.043],[2.753,2.633],[2.503,2.41],[2.608,2.534],[3.626,3.561],[4.398,4.427],[3.856,4.04],[3.398,3.746],[3.035,3.402],[2.661,3.235],[2.926,3.952],[2.382,3.72],[1.669,3.071],[0.794,1.685],[0.878,2.696]],"le":73.2,"tfr":1.45,"gr":-0.32,"mig":0.2,"imr":3.5,"urb":74.8,"gdp":10127,"hx":5.3,"agr":5.8,"ind":26.8,"srv":67.4,"empY":2019,"inc":"UMC","reg":"ECS"},"RWA":{"c2":"rw","pop":14106347,"area":24670.0,"py":[[6.751,6.62],[6.339,6.29],[5.775,5.76],[5.623,5.66],[4.602,4.786],[3.756,3.871],[3.453,3.571],[3.15,3.295],[2.681,2.873],[1.748,2.08],[1.302,1.6],[1.058,1.287],[0.961,1.235],[0.725,0.969],[0.459,0.659],[0.227,0.379],[0.156,0.3]],"le":67.8,"tfr":3.7,"gr":2.18,"mig":-0.6,"imr":27.5,"urb":17.4,"gdp":798,"hx":7.5,"agr":62.3,"ind":8.6,"srv":29.1,"empY":2019,"inc":"LIC","reg":"SSF"},"KNA":{"c2":"kn","pop":46803,"area":260.0,"py":[[3.049,2.963],[3.175,3.192],[2.855,2.978],[3.192,3.485],[3.395,3.647],[3.607,3.957],[3.852,4.03],[3.951,4.425],[3.496,4.147],[3.408,3.498],[3.134,3.391],[3.092,3.222],[2.803,3.094],[2.239,2.692],[1.365,1.476],[0.679,0.808],[0.605,1.098]],"le":72.1,"tfr":1.51,"gr":0.19,"mig":0.0,"imr":12.6,"urb":30.8,"gdp":17436,"hx":5.3,"agr":null,"ind":null,"srv":null,"empY":null,"inc":"HIC","reg":"LCN"},"LCA":{"c2":"lc","pop":179523,"area":610.0,"py":[[2.869,2.791],[2.965,2.889],[3.149,3.048],[3.553,3.379],[3.969,3.857],[4.487,4.352],[4.463,4.296],[3.966,4.041],[3.703,3.723],[3.431,3.458],[3.238,3.434],[3.071,3.245],[2.465,2.707],[1.722,1.984],[1.085,1.401],[0.711,1.011],[0.548,0.989]],"le":72.7,"tfr":1.38,"gr":0.27,"mig":0.0,"imr":14.4,"urb":18.8,"gdp":9276,"hx":4.4,"agr":10.0,"ind":14.7,"srv":75.3,"empY":2019,"inc":"UMC","reg":"LCN"},"VCT":{"c2":"vc","pop":100966,"area":390.0,"py":[[3.152,3.055],[3.781,3.672],[3.986,3.852],[3.728,3.492],[3.765,3.442],[3.807,3.432],[3.489,3.316],[3.27,3.21],[3.359,3.44],[3.356,3.226],[3.316,2.967],[3.306,3.042],[3.001,2.812],[2.258,2.195],[1.457,1.531],[0.966,1.055],[0.957,1.308]],"le":71.2,"tfr":1.78,"gr":-0.7,"mig":-7.7,"imr":13.2,"urb":53.0,"gdp":7298,"hx":4.5,"agr":10.1,"ind":19.9,"srv":70.0,"empY":2019,"inc":"UMC","reg":"LCN"},"WSM":{"c2":"ws","pop":217342,"area":2830.0,"py":[[6.657,6.188],[6.856,6.483],[6.386,6.063],[5.139,4.839],[3.895,3.611],[3.076,3.327],[2.692,3.034],[2.405,2.672],[2.316,2.441],[2.277,2.157],[2.333,2.218],[2.026,1.828],[1.64,1.658],[1.188,1.205],[0.741,0.81],[0.412,0.563],[0.313,0.55]],"le":71.7,"tfr":3.83,"gr":0.63,"mig":-13.0,"imr":13.1,"urb":17.9,"gdp":4067,"hx":5.2,"agr":30.2,"ind":24.9,"srv":44.9,"empY":2019,"inc":"LMC","reg":"EAS"},"SMR":{"c2":"sm","pop":33607,"area":60.0,"py":[[1.657,1.678],[2.047,2.035],[2.627,2.404],[2.654,2.404],[2.702,2.482],[2.55,2.38],[2.354,2.455],[2.565,2.687],[3.077,3.264],[3.868,4.157],[4.407,4.434],[4.478,4.672],[4.002,3.952],[2.91,2.949],[2.526,2.663],[2.009,2.303],[2.732,3.916]],"le":85.7,"tfr":1.15,"gr":-0.74,"mig":-5.6,"imr":1.1,"urb":97.5,"gdp":47731,"hx":7.1,"agr":null,"ind":null,"srv":null,"empY":null,"inc":"HIC","reg":"ECS"},"STP":{"c2":"st","pop":233185,"area":960.0,"py":[[6.714,6.553],[6.303,6.244],[6.121,6.108],[5.793,5.858],[4.568,4.773],[3.5,3.604],[2.979,3.031],[2.825,2.893],[2.754,2.761],[2.27,2.194],[1.766,1.665],[1.348,1.318],[1.052,1.122],[0.714,0.776],[0.474,0.54],[0.273,0.366],[0.265,0.474]],"le":69.7,"tfr":3.64,"gr":2.0,"mig":-2.6,"imr":11.5,"urb":74.4,"gdp":2158,"hx":6.3,"agr":19.1,"ind":17.9,"srv":62.9,"empY":2019,"inc":"LMC","reg":"SSF"},"SAU":{"c2":"sa","pop":33661241,"area":2149690.0,"py":[[3.973,3.809],[4.182,4.033],[4.051,3.873],[3.652,3.5],[4.218,3.295],[6.473,3.708],[7.943,3.993],[7.576,3.59],[6.071,2.822],[4.233,2.024],[3.029,1.49],[2.191,1.142],[1.396,0.833],[0.731,0.521],[0.403,0.327],[0.266,0.226],[0.203,0.223]],"le":78.7,"tfr":2.28,"gr":2.39,"mig":9.8,"imr":5.1,"urb":84.3,"gdp":20110,"hx":6.4,"agr":2.4,"ind":24.8,"srv":72.8,"empY":2019,"inc":"HIC","reg":"MEA"},"SEN":{"c2":"sn","pop":18288074,"area":192530.0,"py":[[6.948,6.569],[6.634,6.046],[6.355,5.857],[5.734,5.368],[4.902,4.807],[4.19,4.175],[3.388,3.461],[2.846,2.934],[2.391,2.376],[1.948,1.919],[1.525,1.562],[1.272,1.243],[0.963,0.982],[0.731,0.788],[0.502,0.544],[0.289,0.292],[0.24,0.219]],"le":68.7,"tfr":3.82,"gr":2.33,"mig":-0.6,"imr":24.1,"urb":48.1,"gdp":1488,"hx":4.0,"agr":30.1,"ind":13.1,"srv":56.8,"empY":2019,"inc":"LMC","reg":"SSF"},"SRB":{"c2":"rs","pop":6758334,"area":87460.0,"py":[[2.35,2.269],[2.44,2.411],[2.443,2.422],[2.508,2.513],[2.602,2.625],[2.818,2.805],[3.0,3.037],[3.307,3.376],[3.497,3.591],[3.535,3.668],[3.286,3.495],[3.148,3.478],[3.182,3.694],[3.212,3.917],[2.908,3.818],[1.629,2.397],[1.6,3.02]],"le":76.8,"tfr":1.5,"gr":-0.44,"mig":0.6,"imr":4.2,"urb":56.4,"gdp":7666,"hx":8.5,"agr":15.6,"ind":27.4,"srv":57.0,"empY":2019,"inc":"UMC","reg":"ECS"},"SYC":{"c2":"sc","pop":129207,"area":460.0,"py":[[3.51,3.36],[3.437,3.24],[3.292,3.206],[3.174,3.02],[3.677,2.944],[4.966,3.266],[5.678,3.612],[5.791,3.38],[5.083,3.234],[4.15,3.063],[3.508,2.82],[2.762,2.79],[2.27,2.326],[1.818,1.702],[1.006,1.044],[0.583,0.738],[0.514,1.036]],"le":72.9,"tfr":2.13,"gr":1.96,"mig":14.1,"imr":11.8,"urb":57.5,"gdp":11425,"hx":5.1,"agr":null,"ind":null,"srv":null,"empY":null,"inc":"HIC","reg":"SSF"},"SLE":{"c2":"sl","pop":8552905,"area":72180.0,"py":[[6.897,6.768],[6.351,6.267],[6.047,5.978],[5.484,5.413],[4.909,4.847],[4.151,4.153],[3.5,3.483],[2.95,2.935],[2.434,2.44],[1.977,2.023],[1.574,1.648],[1.241,1.337],[0.927,1.041],[0.641,0.76],[0.4,0.503],[0.239,0.316],[0.149,0.216]],"le":61.8,"tfr":3.79,"gr":2.18,"mig":-0.5,"imr":70.7,"urb":42.9,"gdp":485,"hx":16.1,"agr":54.5,"ind":6.8,"srv":38.8,"empY":2019,"inc":"LIC","reg":"SSF"},"SGP":{"c2":"sg","pop":5812461,"area":709.0,"py":[[2.024,1.946],[1.981,1.902],[1.989,1.864],[3.278,2.859],[5.185,4.217],[5.712,4.663],[5.312,4.578],[4.326,3.931],[3.741,3.546],[3.292,3.166],[3.071,2.988],[2.868,2.773],[2.744,2.667],[2.319,2.407],[1.733,1.905],[1.053,1.262],[1.048,1.649]],"le":83.7,"tfr":0.94,"gr":0.81,"mig":4.7,"imr":1.7,"urb":100.0,"gdp":59798,"hx":4.5,"agr":0.0,"ind":15.6,"srv":84.4,"empY":2019,"inc":"HIC","reg":"EAS"},"SVK":{"c2":"sk","pop":5519573,"area":48080.0,"py":[[2.591,2.465],[2.769,2.631],[2.765,2.634],[2.586,2.448],[2.491,2.371],[2.843,2.712],[3.564,3.422],[3.928,3.772],[4.164,3.934],[4.218,4.02],[3.461,3.426],[3.077,3.195],[2.968,3.247],[2.802,3.382],[2.198,2.989],[1.275,2.059],[1.123,2.47]],"le":78.3,"tfr":1.56,"gr":0.06,"mig":0.9,"imr":4.5,"urb":53.8,"gdp":19157,"hx":6.7,"agr":2.8,"ind":36.1,"srv":61.1,"empY":2019,"inc":"HIC","reg":"ECS"},"SVN":{"c2":"si","pop":2119224,"area":20136.4,"py":[[2.302,2.172],[2.556,2.424],[2.749,2.618],[2.486,2.4],[2.413,2.243],[2.851,2.452],[3.129,2.712],[3.618,3.206],[3.993,3.526],[3.987,3.576],[3.631,3.362],[3.642,3.558],[3.409,3.428],[3.163,3.333],[2.704,3.016],[1.642,2.115],[1.947,3.64]],"le":81.6,"tfr":1.58,"gr":0.08,"mig":2.5,"imr":1.8,"urb":55.1,"gdp":25180,"hx":8.3,"agr":4.3,"ind":34.1,"srv":61.6,"empY":2019,"inc":"HIC","reg":"ECS"},"SLB":{"c2":"sb","pop":809539,"area":27990.0,"py":[[6.63,6.217],[6.506,6.11],[6.045,5.663],[5.275,4.92],[4.706,4.56],[3.93,3.887],[3.328,3.261],[3.201,3.203],[2.791,2.69],[2.443,2.28],[1.999,1.854],[1.437,1.385],[1.056,0.997],[0.728,0.709],[0.508,0.543],[0.281,0.307],[0.267,0.284]],"le":70.5,"tfr":3.56,"gr":2.38,"mig":2.0,"imr":14.5,"urb":24.7,"gdp":2258,"hx":4.5,"agr":37.3,"ind":12.1,"srv":50.6,"empY":2019,"inc":"LMC","reg":"EAS"},"SOM":{"c2":"so","pop":18685826,"area":627340.0,"py":[[9.404,9.105],[7.91,7.692],[6.343,6.178],[5.501,5.367],[4.624,4.555],[3.781,3.766],[2.725,2.736],[2.399,2.433],[1.944,1.99],[1.507,1.562],[1.179,1.26],[0.918,1.022],[0.71,0.811],[0.523,0.616],[0.349,0.427],[0.174,0.225],[0.106,0.157]],"le":58.8,"tfr":6.13,"gr":3.56,"mig":2.5,"imr":65.7,"urb":46.1,"gdp":309,"hx":null,"agr":80.3,"ind":2.4,"srv":17.3,"empY":2019,"inc":"LIC","reg":"SSF"},"ZAF":{"c2":"za","pop":63627884,"area":1213090.0,"py":[[4.673,4.609],[4.159,4.136],[4.211,4.18],[4.192,4.137],[4.072,3.96],[4.394,4.436],[4.46,4.545],[4.205,4.255],[3.601,3.608],[2.724,2.828],[2.171,2.441],[1.762,2.181],[1.511,1.959],[1.129,1.538],[0.726,1.083],[0.347,0.614],[0.342,0.812]],"le":66.1,"tfr":2.22,"gr":1.31,"mig":3.6,"imr":27.8,"urb":67.4,"gdp":5091,"hx":8.3,"agr":5.3,"ind":22.3,"srv":72.4,"empY":2019,"inc":"UMC","reg":"SSF"},"SSD":{"c2":"ss","pop":11819853,"area":631928.1,"py":[[6.551,6.383],[6.216,6.09],[7.158,7.006],[6.365,6.263],[5.024,4.962],[3.178,3.17],[2.522,2.692],[2.192,2.455],[2.535,2.848],[2.288,2.575],[1.791,2.065],[1.257,1.495],[0.884,1.085],[0.588,0.756],[0.344,0.479],[0.187,0.29],[0.109,0.197]],"le":57.6,"tfr":3.86,"gr":5.86,"mig":39.6,"imr":63.3,"urb":20.2,"gdp":1120,"hx":6.4,"agr":60.4,"ind":16.4,"srv":23.2,"empY":2019,"inc":"LIC","reg":"SSF"},"ESP":{"c2":"es","pop":47915815,"area":499603.5,"py":[[1.87,1.766],[2.277,2.148],[2.584,2.431],[2.729,2.579],[2.631,2.474],[2.633,2.534],[2.888,2.827],[3.134,3.119],[3.75,3.687],[4.282,4.152],[4.042,3.98],[3.824,3.896],[3.326,3.531],[2.723,2.993],[2.214,2.553],[1.843,2.315],[2.35,3.914]],"le":83.7,"tfr":1.21,"gr":0.02,"mig":2.5,"imr":2.4,"urb":80.8,"gdp":27057,"hx":9.0,"agr":4.0,"ind":20.4,"srv":75.5,"empY":2019,"inc":"HIC","reg":"ECS"},"LKA":{"c2":"lk","pop":23038437,"area":61864.0,"py":[[3.608,3.461],[3.761,3.611],[3.94,3.818],[3.968,3.882],[3.719,3.623],[3.596,3.549],[3.37,3.518],[3.223,3.491],[3.452,3.699],[3.105,3.33],[2.777,3.011],[2.599,2.911],[2.322,2.738],[1.917,2.396],[1.451,1.977],[0.908,1.378],[0.668,1.223]],"le":77.5,"tfr":1.97,"gr":0.58,"mig":-1.2,"imr":5.1,"urb":18.7,"gdp":3682,"hx":3.8,"agr":25.0,"ind":27.9,"srv":47.2,"empY":2019,"inc":"LMC","reg":"SAS"},"SDN":{"c2":"sd","pop":50048573,"area":1849233.7,"py":[[7.725,7.479],[6.768,6.595],[6.036,5.91],[5.45,5.357],[4.822,4.782],[4.133,4.146],[3.309,3.455],[2.567,2.821],[2.043,2.367],[1.566,1.917],[1.387,1.645],[1.155,1.324],[0.948,1.035],[0.749,0.744],[0.493,0.431],[0.271,0.222],[0.171,0.177]],"le":66.3,"tfr":4.32,"gr":0.02,"mig":-27.0,"imr":36.2,"urb":35.3,"gdp":595,"hx":4.5,"agr":38.4,"ind":16.8,"srv":44.8,"empY":2019,"inc":"LIC","reg":"SSF"},"SUR":{"c2":"sr","pop":631744,"area":156000.0,"py":[[4.299,4.146],[4.377,4.226],[4.444,4.301],[4.36,4.242],[4.433,4.351],[4.02,3.952],[3.563,3.42],[3.539,3.36],[3.362,3.12],[2.824,2.784],[2.901,2.782],[2.583,2.585],[2.078,2.19],[1.35,1.686],[0.886,1.173],[0.483,0.786],[0.461,0.933]],"le":73.6,"tfr":2.25,"gr":0.91,"mig":-1.6,"imr":14.1,"urb":66.1,"gdp":6491,"hx":8.0,"agr":8.1,"ind":24.3,"srv":67.6,"empY":2019,"inc":"UMC","reg":"LCN"},"SWE":{"c2":"se","pop":10581078,"area":407310.0,"py":[[2.702,2.556],[3.018,2.846],[3.084,2.91],[2.986,2.809],[2.924,2.628],[3.134,2.916],[3.787,3.594],[3.489,3.298],[3.185,3.031],[3.113,3.001],[3.174,3.096],[3.281,3.2],[2.804,2.771],[2.56,2.603],[2.382,2.505],[2.294,2.503],[2.442,3.373]],"le":83.3,"tfr":1.43,"gr":0.56,"mig":5.2,"imr":1.9,"urb":88.0,"gdp":51926,"hx":10.9,"agr":1.7,"ind":18.4,"srv":79.9,"empY":2019,"inc":"HIC","reg":"ECS"},"CHE":{"c2":"ch","pop":8898069,"area":39516.0,"py":[[2.49,2.365],[2.621,2.483],[2.578,2.442],[2.496,2.357],[2.622,2.448],[3.038,2.889],[3.525,3.424],[3.632,3.556],[3.582,3.519],[3.393,3.359],[3.555,3.535],[3.8,3.749],[3.358,3.364],[2.643,2.753],[2.152,2.402],[1.888,2.204],[2.297,3.482]],"le":84.0,"tfr":1.43,"gr":0.62,"mig":5.1,"imr":3.2,"urb":73.9,"gdp":86602,"hx":11.9,"agr":2.6,"ind":20.3,"srv":77.1,"empY":2019,"inc":"HIC","reg":"ECS"},"SYR":{"c2":"sy","pop":24174628,"area":183630.0,"py":[[4.985,4.764],[4.243,4.056],[5.912,5.626],[6.103,5.886],[5.904,5.776],[4.645,4.5],[3.279,3.147],[2.973,2.98],[2.681,2.787],[2.372,2.514],[1.985,2.155],[1.612,1.791],[1.222,1.406],[0.886,1.057],[0.578,0.729],[0.375,0.453],[0.24,0.377]],"le":72.1,"tfr":2.71,"gr":4.92,"mig":32.1,"imr":16.7,"urb":55.5,"gdp":2033,"hx":3.6,"agr":10.1,"ind":23.2,"srv":66.7,"empY":2019,"inc":"LIC","reg":"MEA"},"TJK":{"c2":"tj","pop":10491706,"area":138790.0,"py":[[6.528,6.185],[6.37,6.253],[5.502,5.583],[4.227,4.4],[4.111,4.377],[4.012,4.229],[3.881,4.002],[3.438,3.575],[2.596,2.716],[2.066,2.218],[1.811,1.979],[1.582,1.763],[1.34,1.511],[0.849,0.982],[0.455,0.576],[0.184,0.259],[0.166,0.274]],"le":71.8,"tfr":3.07,"gr":1.96,"mig":-1.9,"imr":24.5,"urb":27.5,"gdp":859,"hx":7.2,"agr":44.7,"ind":15.8,"srv":39.5,"empY":2019,"inc":"LMC","reg":"ECS"},"TZA":{"c2":"tz","pop":67578209,"area":885800.0,"py":[[8.17,7.982],[7.195,7.054],[6.16,6.071],[5.492,5.451],[4.647,4.636],[3.925,3.917],[3.213,3.251],[2.646,2.761],[2.161,2.319],[1.775,1.89],[1.386,1.426],[0.944,1.031],[0.626,0.827],[0.474,0.708],[0.355,0.508],[0.234,0.325],[0.158,0.284]],"le":67.0,"tfr":4.61,"gr":2.88,"mig":-0.6,"imr":28.9,"urb":35.2,"gdp":1076,"hx":3.6,"agr":65.1,"ind":6.5,"srv":28.4,"empY":2019,"inc":"LMC","reg":"SSF"},"THA":{"c2":"th","pop":71689208,"area":510890.0,"py":[[2.201,2.072],[2.566,2.418],[2.913,2.748],[3.086,2.929],[3.316,3.15],[3.633,3.512],[3.579,3.548],[3.501,3.517],[3.686,3.77],[3.574,3.799],[3.62,3.978],[3.445,3.86],[3.061,3.48],[2.433,2.87],[1.752,2.185],[1.11,1.483],[1.24,1.966]],"le":76.4,"tfr":1.21,"gr":-0.04,"mig":0.3,"imr":6.2,"urb":51.4,"gdp":7189,"hx":3.8,"agr":31.4,"ind":22.8,"srv":45.7,"empY":2019,"inc":"UMC","reg":"EAS"},"TLS":{"c2":"tl","pop":1391725,"area":14870.0,"py":[[5.667,5.423],[6.057,5.896],[5.541,5.361],[5.754,5.619],[5.248,5.16],[4.292,4.28],[3.523,3.574],[3.114,3.104],[2.277,2.247],[1.903,1.793],[1.972,1.784],[1.492,1.387],[1.119,1.109],[0.8,0.817],[0.7,0.817],[0.59,0.765],[0.362,0.453]],"le":67.7,"tfr":2.71,"gr":1.07,"mig":-4.1,"imr":37.5,"urb":31.3,"gdp":1381,"hx":4.3,"agr":39.3,"ind":16.3,"srv":44.4,"empY":2019,"inc":"LMC","reg":"EAS"},"TGO":{"c2":"tg","pop":9412392,"area":54390.0,"py":[[7.231,7.11],[6.66,6.534],[6.153,6.022],[5.323,5.199],[4.503,4.391],[3.853,3.756],[3.411,3.316],[2.973,2.891],[2.564,2.51],[2.155,2.131],[1.711,1.728],[1.312,1.36],[0.974,1.04],[0.692,0.76],[0.45,0.507],[0.24,0.277],[0.12,0.145]],"le":62.7,"tfr":4.19,"gr":2.32,"mig":-0.2,"imr":41.3,"urb":42.8,"gdp":915,"hx":6.2,"agr":32.4,"ind":19.2,"srv":48.4,"empY":2019,"inc":"LIC","reg":"SSF"},"TON":{"c2":"to","pop":104379,"area":720.0,"py":[[5.866,5.431],[6.156,5.781],[6.392,5.978],[5.453,5.566],[4.212,4.714],[2.379,3.624],[2.089,3.115],[2.068,3.127],[2.149,2.909],[2.079,2.504],[2.177,2.482],[2.013,2.096],[1.397,1.584],[1.071,1.293],[0.758,1.002],[0.527,0.724],[0.461,0.823]],"le":72.9,"tfr":3.13,"gr":-0.42,"mig":-20.8,"imr":9.0,"urb":23.1,"gdp":4903,"hx":5.1,"agr":19.4,"ind":30.9,"srv":49.8,"empY":2019,"inc":"UMC","reg":"EAS"},"TTO":{"c2":"tt","pop":1505755,"area":5130.0,"py":[[2.822,2.72],[3.075,2.968],[3.21,3.097],[3.198,3.071],[3.223,3.076],[3.412,3.258],[3.881,3.773],[4.493,4.436],[4.347,4.301],[3.565,3.537],[3.092,3.131],[2.919,3.102],[2.974,3.206],[2.252,2.681],[1.606,2.029],[0.87,1.216],[0.51,0.946]],"le":73.5,"tfr":1.53,"gr":0.38,"mig":1.4,"imr":13.5,"urb":53.2,"gdp":15384,"hx":6.9,"agr":3.0,"ind":26.6,"srv":70.3,"empY":2019,"inc":"HIC","reg":"LCN"},"TUN":{"c2":"tn","pop":12240260,"area":155360.0,"py":[[3.704,3.522],[4.421,4.188],[4.361,4.066],[3.667,3.434],[3.34,3.189],[3.503,3.487],[3.769,3.875],[3.774,4.077],[3.573,3.861],[3.22,3.451],[2.887,2.99],[2.655,2.856],[2.339,2.461],[1.864,2.011],[1.219,1.4],[0.615,0.837],[0.525,0.858]],"le":76.5,"tfr":1.83,"gr":0.65,"mig":-1.1,"imr":9.0,"urb":69.6,"gdp":3320,"hx":7.3,"agr":13.8,"ind":33.5,"srv":52.8,"empY":2019,"inc":"LMC","reg":"MEA"},"TUR":{"c2":"tr","pop":87371675,"area":769630.0,"py":[[3.292,3.154],[3.844,3.711],[3.897,3.76],[3.666,3.519],[3.921,3.756],[4.016,3.837],[3.815,3.678],[3.742,3.653],[3.851,3.796],[3.549,3.552],[2.89,2.869],[2.722,2.756],[2.25,2.355],[1.77,1.939],[1.297,1.562],[0.75,1.014],[0.652,1.166]],"le":77.2,"tfr":1.62,"gr":0.23,"mig":-3.6,"imr":9.2,"urb":76.1,"gdp":8538,"hx":4.1,"agr":18.1,"ind":25.3,"srv":56.6,"empY":2019,"inc":"UMC","reg":"ECS"},"TKM":{"c2":"tm","pop":7430703,"area":469930.0,"py":[[5.522,5.228],[5.675,5.435],[4.954,4.805],[3.697,3.422],[3.653,3.542],[4.448,4.398],[4.394,4.297],[3.784,3.735],[3.033,3.137],[2.623,3.005],[2.408,2.846],[1.889,2.308],[1.449,1.918],[0.881,1.3],[0.417,0.788],[0.126,0.369],[0.105,0.407]],"le":70.1,"tfr":2.69,"gr":1.8,"mig":2.0,"imr":31.7,"urb":52.5,"gdp":7612,"hx":6.6,"agr":20.7,"ind":39.8,"srv":39.5,"empY":2019,"inc":"UMC","reg":"ECS"},"TUV":{"c2":"tv","pop":9727,"area":30.0,"py":[[5.891,5.243],[6.035,5.541],[5.387,4.791],[4.637,4.112],[4.061,3.835],[4.061,3.752],[3.65,3.166],[2.961,2.642],[2.375,1.964],[2.354,2.138],[2.807,2.272],[2.611,2.848],[1.779,2.57],[1.151,1.635],[0.586,0.977],[0.473,0.699],[0.339,0.658]],"le":67.1,"tfr":3.21,"gr":-1.8,"mig":-32.9,"imr":16.1,"urb":64.0,"gdp":4143,"hx":19.0,"agr":null,"ind":null,"srv":null,"empY":null,"inc":"UMC","reg":"EAS"},"UGA":{"c2":"ug","pop":49332093,"area":200520.0,"py":[[8.203,8.033],[7.26,7.142],[6.585,6.534],[5.822,5.835],[5.02,5.066],[4.203,4.262],[3.334,3.406],[2.485,2.559],[1.816,1.888],[1.427,1.503],[1.143,1.235],[0.84,0.954],[0.572,0.703],[0.384,0.508],[0.251,0.355],[0.132,0.196],[0.108,0.235]],"le":68.3,"tfr":4.28,"gr":2.78,"mig":-2.6,"imr":28.8,"urb":25.0,"gdp":817,"hx":6.5,"agr":72.1,"ind":6.5,"srv":21.4,"empY":2019,"inc":"LIC","reg":"SSF"},"UKR":{"c2":"ua","pop":37441260,"area":579400.0,"py":[[1.718,1.616],[2.49,2.339],[3.025,2.843],[2.717,2.575],[2.26,2.153],[2.634,2.532],[3.563,3.447],[4.414,4.287],[4.08,4.058],[3.496,3.773],[3.203,3.66],[3.136,3.696],[3.324,4.101],[2.536,3.783],[1.819,3.29],[0.862,1.864],[1.185,3.522]],"le":73.4,"tfr":0.98,"gr":-1.55,"mig":-8.0,"imr":5.9,"urb":69.6,"gdp":3727,"hx":7.7,"agr":13.8,"ind":25.0,"srv":61.2,"empY":2019,"inc":"LMC","reg":"ECS"},"ARE":{"c2":"ae","pop":10839131,"area":71020.0,"py":[[2.689,2.59],[2.857,2.793],[2.674,2.602],[2.453,2.189],[5.008,3.347],[9.032,4.127],[10.612,4.419],[9.202,4.388],[6.756,3.247],[4.849,2.034],[3.353,1.525],[2.279,1.288],[1.222,0.705],[0.47,0.337],[0.286,0.231],[0.131,0.116],[0.093,0.094]],"le":82.9,"tfr":1.2,"gr":3.7,"mig":28.2,"imr":4.9,"urb":87.0,"gdp":43103,"hx":4.2,"agr":1.4,"ind":34.2,"srv":64.4,"empY":2019,"inc":"HIC","reg":"MEA"},"GBR":{"c2":"gb","pop":68923043,"area":241930.0,"py":[[2.651,2.514],[3.028,2.876],[3.187,3.034],[3.009,2.861],[2.953,2.787],[3.322,3.149],[3.455,3.377],[3.256,3.328],[3.25,3.32],[2.989,3.023],[3.268,3.404],[3.142,3.426],[2.877,3.11],[2.515,2.761],[2.196,2.466],[1.972,2.26],[2.164,3.068]],"le":81.3,"tfr":1.56,"gr":0.7,"mig":6.5,"imr":3.7,"urb":83.9,"gdp":40285,"hx":10.0,"agr":1.0,"ind":18.1,"srv":80.8,"empY":2019,"inc":"HIC","reg":"ECS"},"USA":{"c2":"us","pop":344479572,"area":9147420.0,"py":[[2.757,2.633],[3.01,2.862],[3.182,3.003],[3.392,3.192],[3.359,3.149],[3.397,3.171],[3.673,3.435],[3.556,3.336],[3.427,3.244],[3.093,2.953],[3.095,2.992],[3.064,3.022],[3.132,3.173],[2.747,2.938],[2.158,2.419],[1.578,1.853],[1.62,2.383]],"le":79.3,"tfr":1.62,"gr":0.58,"mig":3.9,"imr":5.3,"urb":82.7,"gdp":63544,"hx":16.9,"agr":1.4,"ind":19.9,"srv":78.7,"empY":2019,"inc":"HIC","reg":"NAC"},"URY":{"c2":"uy","pop":3387479,"area":175020.0,"py":[[2.612,2.476],[3.366,3.19],[3.501,3.345],[3.55,3.391],[3.665,3.519],[3.795,3.675],[3.676,3.556],[3.389,3.296],[3.125,3.156],[3.327,3.415],[2.942,3.003],[2.783,2.954],[2.536,2.827],[2.089,2.512],[1.581,2.102],[1.148,1.765],[1.412,3.321]],"le":78.1,"tfr":1.41,"gr":-0.04,"mig":-0.4,"imr":5.6,"urb":95.5,"gdp":15438,"hx":9.2,"agr":8.4,"ind":18.8,"srv":72.8,"empY":2019,"inc":"HIC","reg":"LCN"},"UZB":{"c2":"uz","pop":36010454,"area":440555.0,"py":[[6.331,5.873],[5.233,4.854],[4.5,4.214],[3.887,3.684],[3.526,3.358],[4.077,3.891],[4.388,4.185],[4.069,3.902],[3.248,3.148],[2.725,2.684],[2.325,2.346],[2.042,2.137],[1.704,1.902],[1.131,1.373],[0.681,0.94],[0.317,0.473],[0.262,0.591]],"le":72.4,"tfr":3.5,"gr":2.01,"mig":-0.2,"imr":11.1,"urb":50.4,"gdp":1686,"hx":5.3,"agr":25.7,"ind":23.0,"srv":51.3,"empY":2019,"inc":"LMC","reg":"ECS"},"VUT":{"c2":"vu","pop":324085,"area":12190.0,"py":[[7.019,6.576],[6.769,6.378],[6.042,5.697],[4.909,4.665],[3.955,3.986],[3.652,3.984],[3.579,3.924],[3.177,3.371],[2.555,2.688],[2.023,1.669],[2.019,1.742],[1.52,1.433],[1.156,1.256],[0.84,0.988],[0.59,0.622],[0.367,0.298],[0.317,0.233]],"le":71.5,"tfr":3.6,"gr":2.29,"mig":0.0,"imr":14.8,"urb":25.5,"gdp":2783,"hx":3.4,"agr":56.8,"ind":14.1,"srv":29.1,"empY":2019,"inc":"LMC","reg":"EAS"},"VEN":{"c2":"ve","pop":28350925,"area":882050.0,"py":[[3.795,3.609],[4.515,4.268],[4.952,4.701],[4.932,4.672],[4.134,3.847],[3.296,3.125],[3.133,3.112],[3.148,3.278],[3.091,3.286],[2.96,3.167],[2.738,2.949],[2.501,2.734],[2.14,2.407],[1.678,1.99],[1.125,1.444],[0.717,1.009],[0.56,0.986]],"le":72.5,"tfr":2.08,"gr":0.35,"mig":-4.0,"imr":15.7,"urb":88.3,"gdp":16056,"hx":3.6,"agr":7.9,"ind":15.3,"srv":76.8,"empY":2019,"inc":null,"reg":"LCN"},"VNM":{"c2":"vn","pop":100675292,"area":310070.0,"py":[[3.726,3.36],[4.085,3.871],[4.275,4.118],[3.613,3.544],[3.21,3.177],[3.409,3.402],[4.31,4.281],[4.233,4.207],[3.73,3.787],[3.208,3.302],[2.959,3.098],[2.592,2.855],[2.188,2.64],[1.567,2.058],[0.964,1.402],[0.491,0.819],[0.419,1.102]],"le":74.6,"tfr":1.91,"gr":0.64,"mig":-0.8,"imr":15.1,"urb":37.3,"gdp":2786,"hx":5.9,"agr":37.2,"ind":27.4,"srv":35.3,"empY":2019,"inc":"LMC","reg":"EAS"},"YEM":{"c2":"ye","pop":39987261,"area":527970.0,"py":[[8.174,7.769],[7.023,6.692],[5.899,5.629],[5.284,5.056],[4.607,4.437],[4.118,4.022],[3.802,3.727],[3.185,3.119],[2.501,2.431],[1.849,1.813],[1.388,1.393],[1.019,1.063],[0.708,0.779],[0.469,0.552],[0.292,0.375],[0.199,0.275],[0.135,0.216]],"le":69.3,"tfr":4.59,"gr":3.03,"mig":-0.1,"imr":32.2,"urb":37.9,"gdp":824,"hx":4.9,"agr":27.5,"ind":10.2,"srv":62.2,"empY":2019,"inc":"LIC","reg":"MEA"},"ZMB":{"c2":"zm","pop":21017548,"area":743390.0,"py":[[7.564,7.553],[6.892,6.897],[6.392,6.409],[5.601,5.647],[4.661,4.738],[3.982,4.053],[3.42,3.46],[2.963,2.964],[2.438,2.43],[1.917,1.952],[1.356,1.449],[0.919,1.047],[0.618,0.757],[0.385,0.523],[0.216,0.332],[0.106,0.175],[0.062,0.12]],"le":66.3,"tfr":4.1,"gr":2.83,"mig":0.5,"imr":38.2,"urb":44.6,"gdp":1051,"hx":4.9,"agr":49.6,"ind":10.5,"srv":39.8,"empY":2019,"inc":"LMC","reg":"SSF"},"ZWE":{"c2":"zw","pop":16478384,"area":386850.0,"py":[[7.103,6.984],[6.76,6.671],[6.851,6.787],[5.633,5.633],[4.694,4.894],[3.092,3.568],[2.589,3.142],[2.852,3.467],[2.631,3.304],[1.627,2.385],[0.982,1.527],[0.748,0.984],[0.629,0.845],[0.596,0.851],[0.467,0.668],[0.227,0.348],[0.162,0.3]],"le":62.8,"tfr":3.72,"gr":1.68,"mig":-6.0,"imr":33.2,"urb":32.2,"gdp":1128,"hx":4.7,"agr":66.2,"ind":6.6,"srv":27.2,"empY":2019,"inc":"LMC","reg":"SSF"}};
+
+/* ---------- 도우미 ---------- */
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function josa(w, a, b){
+  const ch = [...w].reverse().find(c => /[가-힣]/.test(c));
+  if (!ch) return w + a;
+  return w + ((ch.charCodeAt(0) - 0xAC00) % 28 ? a : b);
+}
+function num(n, d=0){ return Number(n).toLocaleString("ko-KR",{maximumFractionDigits:d, minimumFractionDigits:0}); }
+function koPop(n){
+  if (n >= 1e8){ const e = Math.floor(n/1e8), m = Math.round((n % 1e8)/1e4); return `${e}억${m ? " " + num(m) + "만" : ""} 명`; }
+  if (n >= 1e4) return `${num(Math.round(n/1e4))}만 명`;
+  return `${num(Math.round(n))}명`;
+}
+function times(x){
+  if (x >= 1.5) return `약 ${x >= 10 ? num(Math.round(x)) : x.toFixed(1)}배`;
+  if (x >= 0.7) return "비슷한 크기";
+  if (x >= 0.01) return `약 ${Math.round(x*100)}%`;
+  return "1%도 안 되는 크기";
+}
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+/* ---------- 내장 자료로 나라 정보 만들기 ---------- */
+function loadCountry(iso){
+  if (cache.has(iso)) return cache.get(iso);
+  const r = DATA[iso];
+  if (!r) return null;
+  const rows = r.py.map((v, i) => ({ label:AGE_LABEL[i], m:v[0], f:v[1], nm:Math.round(v[0] / 100 * r.pop), nf:Math.round(v[1] / 100 * r.pop) }));
+  const sum = (arr, k) => arr.reduce((s, x) => s + x[k], 0);
+  const young = rows.slice(0,3).reduce((s,x) => s + x.m + x.f, 0);
+  const old = rows.slice(13).reduce((s,x) => s + x.m + x.f, 0);
+  const work = rows.slice(4,11);
+  const bulge = sum(work,"m") / Math.max(0.0001, sum(work,"f"));
+  const bottomAvg = young / 3;
+  const midAvg = rows.slice(6,10).reduce((s,x) => s + x.m + x.f, 0) / 4;
+  const d = {
+    iso, iso2:r.c2, region:REGION_KO[r.reg] || "", income:r.inc,
+    pop:r.pop, popYear:2023, area:r.area, dens: r.area ? r.pop / r.area : null,
+    le:r.le, imr:r.imr, tfr:r.tfr, grow:r.gr, mig:r.mig, urban:r.urb, gdp:r.gdp, health:r.hx,
+    agr:r.agr, ind:r.ind, srv:r.srv, empYear:r.empY,
+    pyramid:{ year:2023, rows, young, old, bulge, bottomAvg, midAvg }
+  };
+  cache.set(iso, d);
+  return d;
+}
+
+/* ---------- 화면 전환 ---------- */
+function go(step){
+  for (let i = 1; i <= 4; i++) $("v" + i).hidden = (i !== step);
+  document.querySelectorAll("#route li").forEach(li => {
+    const s = +li.dataset.step;
+    li.classList.toggle("done", s < step);
+    li.classList.toggle("now", s === step);
+  });
+  window.scrollTo({ top:0, behavior: reduceMotion ? "auto" : "smooth" });
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-goto]"); if (!b) return;
+  const s = +b.dataset.goto;
+  if (s === 1) resetDraw();
+  if (s === 3) renderQuiz();
+  go(s);
+});
+
+/* ---------- 1. 나라 뽑기 ---------- */
+(function buildTicks(){
+  let s = "";
+  for (let i = 0; i < 36; i++){
+    const a = i * 10 * Math.PI / 180, major = i % 9 === 0;
+    const r1 = major ? 76 : 82, r2 = 90;
+    s += `<line class="tick${major ? " major" : ""}" x1="${100 + r1*Math.sin(a)}" y1="${100 - r1*Math.cos(a)}" x2="${100 + r2*Math.sin(a)}" y2="${100 - r2*Math.cos(a)}"/>`;
+  }
+  $("ticks").innerHTML = s;
+})();
+(function buildPicker(){
+  const sorted = [...UN].sort((a,b) => a[1].localeCompare(b[1], "ko"));
+  $("pickSel").innerHTML = sorted.map(([iso, n]) => `<option value="${iso}">${n}</option>`).join("");
+  $("pickSel").value = "KOR";
+})();
+
+let rot = 0, cycleTimer = null;
+function spin(){
+  rot += 1080 + Math.floor(Math.random() * 360);
+  $("needle").style.transform = `rotate(${rot}deg)`;
+}
+function startCycle(){
+  const el = $("countryName");
+  el.classList.remove("landed");
+  if (reduceMotion){ el.textContent = "뽑는 중…"; el.classList.add("cycling"); return; }
+  el.classList.add("cycling");
+  cycleTimer = setInterval(() => { el.textContent = UN[Math.floor(Math.random() * UN.length)][1]; }, 85);
+}
+function stopCycle(){ clearInterval(cycleTimer); cycleTimer = null; $("countryName").classList.remove("cycling"); }
+
+function resetDraw(){
+  $("countryName").textContent = "어느 나라일까요?";
+  $("countryName").classList.remove("landed");
+  $("countryMeta").textContent = "";
+  $("flag").hidden = true;
+  $("btnDraw").hidden = false; $("btnGo").hidden = true; $("btnRedraw").hidden = true;
+  $("drawError").hidden = true;
+}
+function setBusy(b){ ["btnDraw","btnRedraw","btnPick","btnGo"].forEach(id => $(id).disabled = b); }
+function showError(msg){ $("drawError").textContent = msg; $("drawError").hidden = false; }
+
+async function draw(forcedIso){
+  $("drawError").hidden = true;
+  setBusy(true);
+  $("flag").hidden = true; $("countryMeta").textContent = "";
+  spin(); startCycle();
+  let iso = forcedIso;
+  if (!iso){
+    const pool = UN.map(c => c[0]).filter(i => i !== state.iso);
+    iso = pool[Math.floor(Math.random() * pool.length)];
+  }
+  const found = loadCountry(iso);
+  await sleep(reduceMotion ? 0 : 1600);
+  stopCycle();
+  setBusy(false);
+  if (!found){ $("countryName").textContent = "어느 나라일까요?"; showError("이 나라의 자료를 찾지 못했어요. 다른 나라를 골라 주세요."); return; }
+
+  state.iso = found.iso; state.d = found; state.answers = {}; state.note = "";
+  state.name = UN.find(c => c[0] === found.iso)[1];
+  $("noteBox").value = "";
+  const el = $("countryName");
+  el.textContent = state.name;
+  void el.offsetWidth; el.classList.add("landed");
+  if (found.iso2){ $("flag").src = `https://flagcdn.com/w320/${found.iso2}.png`; $("flag").alt = `${state.name} 국기`; $("flag").hidden = false; }
+  $("countryMeta").textContent = found.region ? `${found.region} 지역의 나라예요.` : "";
+  $("btnDraw").hidden = true; $("btnGo").hidden = false; $("btnRedraw").hidden = false;
+  $("btnGo").focus();
+  loadWiki(found.iso, state.name);
+}
+$("btnDraw").addEventListener("click", () => draw());
+$("btnRedraw").addEventListener("click", () => draw());
+$("btnPick").addEventListener("click", () => draw($("pickSel").value));
+$("btnGo").addEventListener("click", () => { renderData(); go(2); });
+
+/* ---------- 인구 피라미드 그리기 ---------- */
+function pyramidHTML(p, compact){
+  const maxV = Math.max(...p.rows.flatMap(r => [r.m, r.f]));
+  const step = maxV > 8 ? 2 : maxV > 4 ? 1 : 0.5;
+  const scaleMax = Math.ceil(maxV / step) * step;
+  const pct = v => (v / scaleMax * 100).toFixed(2) + "%";
+  const tick = (step / scaleMax * 100).toFixed(3) + "%";
+  let h = `<div class="pyr${compact ? " compact" : ""}" style="--tick:${tick}" role="img" aria-label="${esc(state.name)} 인구 피라미드, 유소년층 ${p.young.toFixed(1)}%, 노년층 ${p.old.toFixed(1)}%">`;
+  h += `<div class="pyr-head"><span class="m">남자</span><span></span><span class="f">여자</span></div>`;
+  for (let i = p.rows.length - 1; i >= 0; i--){
+    const r = p.rows[i];
+    const showLabel = !compact || i % 2 === 0 || i === p.rows.length - 1;
+    h += `<div class="pyr-row" data-i="${i}" tabindex="0" aria-label="${r.label}세, 남자 ${num(r.nm)}명, 여자 ${num(r.nf)}명">
+      <div class="side m"><i style="width:${pct(r.m)}"></i></div>
+      <span class="age">${showLabel ? r.label : ""}</span>
+      <div class="side f"><i style="width:${pct(r.f)}"></i></div>
+    </div>`;
+  }
+  let tm = "", tf = "";
+  for (let t = step; t <= scaleMax + 1e-9; t += step){
+    if (compact && (t / step) % 2 !== 0 && t !== scaleMax) continue;
+    const pos = (t / scaleMax * 100).toFixed(2);
+    const lab = (step < 1 ? t.toFixed(1) : t) + "%";
+    tm += `<span style="right:${pos}%">${lab}</span>`;
+    tf += `<span style="left:${pos}%">${lab}</span>`;
+  }
+  h += `<div class="pyr-axis"><div class="side m">${tm}</div><span></span><div class="side f">${tf}</div></div>`;
+  h += `<p class="pyr-readout" aria-live="polite">${compact ? "막대를 가리키면 인구수가 보여요." : "막대에 마우스를 올리거나 눌러 보세요. 그 나이대의 인구수가 여기에도 표시돼요."}</p></div>`;
+  return h;
+}
+
+/* ---------- 피라미드 인구수 표시 ---------- */
+function rowInfo(row){
+  const r = state.d.pyramid.rows[+row.dataset.i];
+  return { r, html:`<b>${r.label}세</b><span class="tm">남자 ${num(r.nm)}명 (${r.m.toFixed(1)}%)</span><span class="tf">여자 ${num(r.nf)}명 (${r.f.toFixed(1)}%)</span><span>합계 ${num(r.nm + r.nf)}명</span>` };
+}
+let activeRow = null;
+function showRow(row, x, y){
+  if (activeRow && activeRow !== row) activeRow.classList.remove("on");
+  activeRow = row; row.classList.add("on");
+  const { r, html } = rowInfo(row);
+  const tip = $("tip");
+  tip.innerHTML = html; tip.hidden = false;
+  if (x === undefined){ const b = row.getBoundingClientRect(); x = b.left + b.width / 2; y = b.top; }
+  const tw = tip.offsetWidth, th = tip.offsetHeight;
+  let left = x + 14, top = y - th - 10;
+  if (left + tw > window.innerWidth - 8) left = x - tw - 14;
+  if (left < 8) left = 8;
+  if (top < 8) top = y + 18;
+  tip.style.left = left + "px"; tip.style.top = top + "px";
+  const out = row.closest(".pyr").querySelector(".pyr-readout");
+  if (out) out.textContent = `${r.label}세: 남자 ${num(r.nm)}명, 여자 ${num(r.nf)}명 (합계 ${num(r.nm + r.nf)}명)`;
+}
+function hideRow(){ $("tip").hidden = true; if (activeRow){ activeRow.classList.remove("on"); activeRow = null; } }
+document.addEventListener("mousemove", e => {
+  const row = e.target.closest && e.target.closest(".pyr-row");
+  if (row) showRow(row, e.clientX, e.clientY); else if (activeRow && !$("tip").contains(e.target)) hideRow();
+});
+document.addEventListener("click", e => {
+  const row = e.target.closest && e.target.closest(".pyr-row");
+  if (row) showRow(row, e.clientX || undefined, e.clientY || undefined);
+  else if (activeRow) hideRow();
+});
+document.addEventListener("focusin", e => { if (e.target.classList && e.target.classList.contains("pyr-row")) showRow(e.target); });
+document.addEventListener("focusout", e => { if (e.target.classList && e.target.classList.contains("pyr-row")) hideRow(); });
+window.addEventListener("scroll", () => { if (activeRow && document.activeElement !== activeRow) hideRow(); }, { passive:true });
+
+/* ---------- 2. 인구 자료 ---------- */
+function renderData(){
+  const d = state.d;
+  $("name2").textContent = state.name;
+  if (d.iso2){ $("flag2").src = `https://flagcdn.com/w160/${d.iso2}.png`; $("flag2").hidden = false; } else $("flag2").hidden = true;
+  $("popVal").textContent = koPop(d.pop);
+  $("popSub").textContent = `${num(Math.round(d.pop))}명 (${d.popYear}년)` + (d.iso !== "KOR" ? `, 대한민국 인구의 ${times(d.pop / KOREA_POP)}` : "");
+  if (d.dens){
+    $("densVal").textContent = `${num(d.dens, d.dens < 10 ? 1 : 0)}명/km²`;
+    $("densSub").textContent = `1km² 땅에 사는 사람 수. 세계 평균은 약 ${WORLD_DENS}명이에요.`;
+  } else { $("densVal").textContent = "자료 없음"; $("densSub").textContent = ""; }
+  if (d.area){
+    $("areaVal").textContent = `${num(Math.round(d.area))}km²`;
+    $("areaSub").textContent = d.iso !== "KOR" ? `대한민국의 ${times(d.area / KOREA_AREA)}` : "";
+  } else { $("areaVal").textContent = "자료 없음"; $("areaSub").textContent = ""; }
+  $("pyrYear").textContent = `${d.pyramid.year}년, 전체 인구 대비 %`;
+  $("pyr").innerHTML = pyramidHTML(d.pyramid, false);
+}
+
+/* ---------- 3. 문제 ---------- */
+const LEVEL_OPTS = (hi, mid, lo) => [{k:"hi",t:"높다",d:hi},{k:"mid",t:"중간이다",d:mid},{k:"lo",t:"낮다",d:lo}];
+const QUESTIONS = [
+  { id:"shape", title:"이 나라의 인구 피라미드는 어떤 모양에 가까운가요?",
+    hint:"맨 아래(0~14세) 막대와 가운데(30~40대) 막대의 길이를 비교해 보세요. 특정 나이대나 한쪽 성별만 유난히 긴 막대가 있는지도 살펴보세요.",
+    opts:[{k:"pyramid",t:"피라미드형",d:"아래가 넓고 위로 갈수록 좁아요"},{k:"bell",t:"종형",d:"아래와 가운데의 폭이 비슷하고 위쪽도 꽤 남아 있어요"},{k:"spindle",t:"방추형(항아리형)",d:"아래가 가운데보다 좁아요"},{k:"star",t:"별형",d:"청장년층, 특히 한쪽 성별이 유난히 많아요"}] },
+  { id:"medical", title:"이 나라의 의료 수준은 어느 정도일까요?",
+    hint:"위쪽(65세 이상) 막대가 얼마나 남아 있나요? 나이가 들수록 막대가 급하게 짧아진다면 일찍 세상을 떠나는 사람이 많다는 뜻이에요.",
+    opts:LEVEL_OPTS("대부분 오래 살고, 아기들도 건강하게 자라요","수명이 늘고 있지만 아직 나아질 점이 있어요","아기와 어린이 사망이 많고, 오래 사는 사람이 적어요") },
+  { id:"welfare", title:"이 나라의 복지 수준(생활 수준과 사회 보장)은 어느 정도일까요?",
+    hint:"출생이 적고 노년층이 많은 나라는 경제가 발전하고 연금·건강보험 같은 제도가 갖춰진 경우가 많아요. 하지만 예외도 있으니 다른 단서도 함께 생각해 보세요.",
+    opts:LEVEL_OPTS("연금, 건강보험, 무상 교육 같은 제도가 잘 갖춰져 있어요","제도가 생기고 있지만 모든 사람에게 충분하지는 않아요","많은 사람이 기본적인 생활과 교육, 의료를 보장받기 어려워요") },
+  { id:"industry", title:"이 나라 사람들은 주로 어떤 산업에서 일할까요?",
+    hint:"유소년층이 아주 많은 나라는 농업에서 일하는 사람이 많은 경우가 많고, 노년층이 많은 나라는 서비스업에서 일하는 사람이 많은 경우가 많아요.",
+    opts:[{k:"p1",t:"1차 산업 중심",d:"농업, 어업, 임업에서 일하는 사람이 많아요"},{k:"p2",t:"2차 산업이 성장하는 단계",d:"농업 비중이 줄고 공장, 건설 일자리가 늘고 있어요"},{k:"p3",t:"3차 산업 중심",d:"상업, 교육, 관광, 금융 같은 서비스업에서 일하는 사람이 많아요"}] }
+];
+
+const SHAPE_TXT = {
+  pyramid:"아래(유소년층)가 넓고 위로 갈수록 좁아지는 모양이에요. 아이가 많이 태어나지만 오래 사는 사람은 적은, 개발도상국에서 흔한 모양이에요.",
+  bell:"출생과 사망이 모두 줄어 나이대별 인구가 비교적 고르게 분포해요. 인구 증가가 느린 나라에서 나타나요.",
+  spindle:"아래가 가운데보다 좁은 모양이에요. 출산율이 매우 낮아서 앞으로 인구가 줄고 고령화가 빨라질 수 있어요.",
+  star:"청장년층, 특히 남성이 유난히 많아요. 일자리를 찾아 다른 나라에서 노동자가 많이 들어온 나라에서 나타나는 모양이에요."
+};
+const LEVEL_KO = {hi:"높다", mid:"중간이다", lo:"낮다"};
+
+function computeKeys(d){
+  const k = {}, ev = {}, why = {};
+  const p = d.pyramid;
+  // 1. 모양
+  let shape;
+  if (p.bulge > 1.35) shape = "star";
+  else if (p.young >= 28) shape = "pyramid";
+  else if (p.bottomAvg < 0.85 * p.midAvg) shape = "spindle";
+  else shape = "bell";
+  k.shape = shape;
+  why.shape = SHAPE_TXT[shape];
+  ev.shape = `유소년층(0~14세) ${p.young.toFixed(1)}%, 노년층(65세 이상) ${p.old.toFixed(1)}%` + (shape === "star" ? `, 20~54세 남자는 여자의 약 ${p.bulge.toFixed(1)}배` : "");
+
+  // 2. 의료
+  if (d.le !== null || d.imr !== null){
+    const sc = [];
+    if (d.le !== null) sc.push(d.le >= 78 ? 2 : d.le >= 70 ? 1 : 0);
+    if (d.imr !== null) sc.push(d.imr <= 6 ? 2 : d.imr <= 25 ? 1 : 0);
+    const a = sc.reduce((s,x) => s + x, 0) / sc.length;
+    k.medical = a >= 1.5 ? "hi" : a >= 0.75 ? "mid" : "lo";
+    const parts = [];
+    if (d.le !== null) parts.push(`기대수명 ${d.le.toFixed(1)}세 (세계 평균 약 ${WORLD_LE}세)`);
+    if (d.imr !== null) parts.push(`영아 사망률 1,000명당 ${d.imr.toFixed(1)}명`);
+    ev.medical = parts.join(", ");
+    why.medical = {
+      hi:"사람들이 오래 살고, 태어난 아기가 첫돌 전에 사망하는 경우가 매우 드물어요. 그래서 피라미드 위쪽(노년층)까지 막대가 길게 남아 있어요.",
+      mid:"수명이 꽤 길어졌지만 아기와 어린이 건강, 병원 이용 등에서 선진국보다 아직 부족한 점이 있어요.",
+      lo:"아기와 어린이가 병으로 사망하는 경우가 많고 기대수명도 짧아요. 그래서 피라미드가 위로 갈수록 급하게 좁아져요."
+    }[k.medical];
+  }
+
+  // 3. 복지
+  const inc = d.income;
+  if (INCOME_KO[inc]){
+    k.welfare = inc === "HIC" ? "hi" : inc === "UMC" ? "mid" : "lo";
+    const parts = [`세계은행 소득 분류(2021년 발표): ${INCOME_KO[inc]}`];
+    if (d.gdp != null) parts.push(`1인당 국내총생산 약 ${num(Math.round(d.gdp))}달러`);
+    if (d.health != null) parts.push(`국내총생산 대비 의료비 지출 ${d.health.toFixed(1)}%`);
+    ev.welfare = parts.join(", ");
+    why.welfare = {
+      hi:"소득이 높은 나라라서 나라가 연금, 건강보험, 교육 같은 사회 보장에 많은 돈을 쓸 수 있어요.",
+      mid:"경제가 성장하면서 사회 보장 제도가 만들어지고 있지만, 지역이나 계층에 따라 차이가 커요.",
+      lo:"나라 살림이 넉넉하지 않아 많은 사람이 기본적인 의료, 교육, 노후 보장을 받기 어려워요."
+    }[k.welfare];
+    if (shape === "star" && k.welfare === "hi") why.welfare += " 노년층이 적은 것은 복지가 부족해서가 아니라, 젊은 외국인 노동자가 많이 들어와 있기 때문이에요.";
+  }
+
+  // 4. 산업
+  if (d.agr != null && d.srv != null){
+    k.industry = d.agr >= 35 ? "p1" : d.srv >= 60 ? "p3" : "p2";
+    ev.industry = `일하는 사람 비율(${d.empYear}년): 1차 산업 ${d.agr.toFixed(1)}%, 2차 산업 ${d.ind != null ? d.ind.toFixed(1) : "?"}%, 3차 산업 ${d.srv.toFixed(1)}%`;
+    why.industry = {
+      p1:"일하는 사람 셋 중 한 명 이상이 농업, 어업, 임업에 종사해요. 일손이 많이 필요해서 자녀를 많이 낳는 경향과도 관련이 있어요.",
+      p2:"농업 비중이 줄고 공업과 서비스업이 함께 커지는 중간 단계예요. 도시로 이동하는 사람이 많아지는 시기이기도 해요.",
+      p3:"절반이 훨씬 넘는 사람이 서비스업에서 일해요. 산업이 발달한 나라일수록 3차 산업 비중이 높아요."
+    }[k.industry];
+  }
+  return { k, ev, why };
+}
+
+function renderQuiz(){
+  const d = state.d;
+  $("name3").textContent = `${state.name}의 인구 피라미드를 보고 답해 보세요`;
+  $("pyrSmall").innerHTML = pyramidHTML(d.pyramid, true);
+  $("sideFacts").textContent = `총인구 ${koPop(d.pop)}, 인구 밀도 ${d.dens ? num(d.dens, d.dens < 10 ? 1 : 0) + "명/km²" : "자료 없음"}`;
+  const keys = computeKeys(d);
+  state.keys = keys;
+  const qs = QUESTIONS.filter(q => keys.k[q.id]);
+  $("questions").innerHTML = qs.map((q, i) => `
+    <fieldset class="q">
+      <legend><span class="qn">${i + 1}</span><span>${q.title}</span></legend>
+      <details><summary>힌트 보기</summary>${q.hint}</details>
+      <div class="opts">
+        ${q.opts.map(o => `<label class="opt"><input type="radio" name="${q.id}" value="${o.k}" ${state.answers[q.id] === o.k ? "checked" : ""}><span><b>${o.t}</b><small>${o.d}</small></span></label>`).join("")}
+      </div>
+    </fieldset>`).join("");
+  $("quizError").hidden = true;
+}
+
+$("quizForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const qs = QUESTIONS.filter(q => state.keys.k[q.id]);
+  const ans = {};
+  for (const q of qs){
+    const c = document.querySelector(`input[name="${q.id}"]:checked`);
+    if (!c){ $("quizError").textContent = "모든 문제에 답을 골라 주세요."; $("quizError").hidden = false; return; }
+    ans[q.id] = c.value;
+  }
+  state.answers = ans;
+  state.note = $("noteBox").value.trim();
+  renderAnswers();
+  go(4);
+});
+
+/* ---------- 4. 정답과 이유 ---------- */
+function optLabel(q, key){ const o = q.opts.find(o => o.k === key); return o ? o.t : key; }
+
+function renderAnswers(){
+  const d = state.d, { k, ev, why } = state.keys;
+  const qs = QUESTIONS.filter(q => k[q.id]);
+  let right = 0;
+  $("name4").textContent = `${state.name} 탐험 결과`;
+  $("results").innerHTML = qs.map((q, i) => {
+    const ok = state.answers[q.id] === k[q.id];
+    if (ok) right++;
+    return `<article class="result ${ok ? "ok" : "bad"}">
+      <h3>${i + 1}. ${q.title}</h3>
+      <p><span class="mark">${ok ? "맞았어요" : "다시 생각해 봐요"}</span>. 내 답은 ‘${optLabel(q, state.answers[q.id])}’, 정답은 ‘${optLabel(q, k[q.id])}’이에요.</p>
+      <p>${why[q.id]}</p>
+      <p class="evidence">근거 자료: ${ev[q.id]}</p>
+    </article>`;
+  }).join("");
+  $("score").innerHTML = `<strong>${right} / ${qs.length}</strong><span class="muted">문제를 맞혔어요.</span>`;
+  $("myNote").innerHTML = state.note ? `<p><b>내가 생각한 이유</b></p><p class="mynote">${esc(state.note)}</p>` : "";
+
+  // 인구가 많은/적은 이유
+  const size = d.pop >= 1e8 ? "인구가 매우 많은 나라" : d.pop >= 3e7 ? "인구가 많은 편인 나라" : d.pop >= 5e6 ? "인구가 중간 정도인 나라" : d.pop >= 1e6 ? "인구가 적은 편인 나라" : "인구가 매우 적은 나라";
+  $("reasonTitle").textContent = `${josa(state.name, "은", "는")} ${size}예요`;
+  $("reasonLead").textContent = `총인구 ${koPop(d.pop)}. 아래 요인들이 이 나라의 인구에 어떤 영향을 주는지 살펴보세요. 초록색은 인구를 많게 하는 요인, 빨간색은 인구를 적게 하는 요인이에요.`;
+  const f = reasons(d);
+  const TAG = { more:"인구 ↑ 요인", less:"인구 ↓ 요인", info:"참고" };
+  $("factors").innerHTML = f.map(x => `<li><span class="tag ${x.dir}">${TAG[x.dir]}</span><b>${x.t}</b><p>${x.s}</p></li>`).join("");
+
+  // 더 조사해 보기
+  const n = state.name;
+  const ex = [
+    `지도에서 ${josa(n, "을", "를")} 찾아보고, 큰 강, 평야, 사막, 산맥이 어디에 있는지 확인해 보세요. 사람들은 주로 어디에 모여 살까요?`,
+    `${n}의 기후는 어떤가요? 기후가 사람이 살기에 유리한지, 불리한지 생각해 보세요.`,
+    `${n}의 인구는 앞으로 늘어날까요, 줄어들까요? 인구 피라미드의 맨 아래 막대를 근거로 예상해 보세요.`
+  ];
+  if (d.pyramid.bulge > 1.35) ex.push(`${n}에 외국인 노동자가 많이 들어오는 이유는 무엇일까요? 이 나라의 주요 산업을 찾아보세요.`);
+  $("explore").innerHTML = ex.map(x => `<li>${x}</li>`).join("");
+  const wt = WIKI_TITLE[d.iso] || n;
+  const links = [
+    [`https://terms.naver.com/search.naver?query=${encodeURIComponent(n)}`, "네이버 지식백과"],
+    [`https://ko.wikipedia.org/wiki/${encodeURIComponent(wt)}`, "위키백과"],
+    [`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(n)}`, "구글 지도"],
+    d.iso2 ? [`https://data.worldbank.org/country/${d.iso2}`, "세계은행 국가 자료"] : null
+  ].filter(Boolean);
+  $("links").innerHTML = links.map(([u, t]) => `<a href="${u}" target="_blank" rel="noopener">${t}에서 보기</a>`).join("");
+}
+
+function reasons(d){
+  const f = [], p = d.pyramid;
+  if (d.area){
+    const r = d.area / KOREA_AREA;
+    if (d.area >= 1e6){
+      f.push({ dir:"more", t:"넓은 국토", s:`국토 면적이 대한민국의 ${times(r)}에 이를 만큼 넓어요. 땅이 넓으면 많은 사람이 살 수 있는 바탕이 돼요.` +
+        (d.dens && d.dens < 25 ? " 그런데 인구 밀도는 낮은 편이에요. 넓은 땅 가운데 사막, 몹시 추운 지역, 높은 산지처럼 사람이 살기 어려운 곳이 많은지 지도에서 확인해 보세요." : "") });
+    } else if (d.area < 30000){
+      f.push({ dir:"less", t:"좁은 국토", s:`국토 면적이 대한민국의 ${times(r)} 정도로 작아요. 사람이 살 수 있는 공간 자체가 좁아서 인구가 많아지기 어려워요.` +
+        (d.dens && d.dens > 400 ? " 대신 좁은 땅에 사람들이 빽빽하게 모여 살아 인구 밀도는 매우 높아요." : "") });
+    }
+  }
+  if (d.dens){
+    if (d.dens >= 250) f.push({ dir:"more", t:"사람이 모여드는 땅", s:`인구 밀도가 1km²당 ${num(d.dens)}명으로 세계 평균(약 ${WORLD_DENS}명)보다 훨씬 높아요. 농사짓기 좋은 넓은 평야와 큰 강, 따뜻하고 비가 알맞은 기후, 또는 일자리가 많은 큰 도시가 있으면 사람들이 모여 살아요.` });
+    else if (d.dens < 20) f.push({ dir:"less", t:"사람이 드문 땅", s:`인구 밀도가 1km²당 ${num(d.dens, 1)}명으로 세계 평균(약 ${WORLD_DENS}명)보다 훨씬 낮아요. 건조한 사막, 추운 기후, 험한 산지나 밀림처럼 사람이 살기 어려운 자연환경이 넓게 퍼져 있을 가능성이 커요.` });
+  }
+  if (d.tfr !== null){
+    const t = d.tfr.toFixed(1);
+    if (d.tfr >= 4) f.push({ dir:"more", t:"매우 높은 출산율", s:`여성 한 명이 평생 평균 ${t}명의 아이를 낳아요. 농업 중심 사회에서는 일손으로 자녀가 필요하고, 어린이 사망이 많은 곳에서는 아이를 많이 낳는 경향이 있어요. 인구가 빠르게 늘고 있어요.` });
+    else if (d.tfr >= 2.5) f.push({ dir:"more", t:"높은 출산율", s:`여성 한 명이 평생 평균 ${t}명의 아이를 낳아요. 인구를 유지하는 데 필요한 수준(약 2.1명)보다 높아서 인구가 계속 늘고 있어요.` });
+    else if (d.tfr >= 1.8) f.push({ dir:"info", t:"인구를 유지하는 정도의 출산율", s:`여성 한 명이 평생 평균 ${t}명의 아이를 낳아요. 인구를 유지하는 수준(약 2.1명)과 비슷해 인구 변화가 크지 않아요.` });
+    else if (d.tfr >= 1.3) f.push({ dir:"less", t:"낮은 출산율", s:`여성 한 명이 평생 평균 ${t}명의 아이를 낳아요. 인구를 유지하는 수준(약 2.1명)보다 낮아 앞으로 인구가 줄고 고령화가 진행될 수 있어요. 교육 기간이 길어지고 자녀 양육비가 많이 드는 것이 원인으로 꼽혀요.` });
+    else f.push({ dir:"less", t:"매우 낮은 출산율(초저출산)", s:`여성 한 명이 평생 평균 ${t}명의 아이를 낳아요. 인구를 유지하는 수준(약 2.1명)에 크게 못 미쳐 인구가 줄어들고 있거나 곧 줄어들 거예요.` });
+  }
+  if (d.grow !== null){
+    if (d.grow >= 2) f.push({ dir:"more", t:"빠른 인구 증가", s:`인구가 1년에 약 ${d.grow.toFixed(1)}%씩 늘고 있어요. 이 속도라면 약 ${Math.round(70 / d.grow)}년 뒤에는 인구가 지금의 두 배가 돼요.` });
+    else if (d.grow < 0) f.push({ dir:"less", t:"줄어드는 인구", s:`인구가 1년에 약 ${Math.abs(d.grow).toFixed(1)}%씩 줄고 있어요.` +
+      (d.tfr !== null && d.tfr >= 1.6 ? " 출산율이 아주 낮지 않은데도 인구가 줄고 있다면, 일자리나 안전을 찾아 다른 나라로 떠나는 사람이 많을 수 있어요." : "") });
+  }
+  if (d.mig != null && p.bulge <= 1.35){
+    if (d.mig >= 5) f.push({ dir:"more", t:"들어오는 사람이 많은 나라", s:`1년 동안 인구 1,000명당 약 ${d.mig.toFixed(1)}명이 다른 나라에서 순수하게 더 들어와요. 일자리, 높은 임금, 안전한 생활을 찾아 이주해 오는 사람이 많아요.` });
+    else if (d.mig <= -3) f.push({ dir:"less", t:"떠나는 사람이 많은 나라", s:`1년 동안 인구 1,000명당 약 ${Math.abs(d.mig).toFixed(1)}명이 다른 나라로 순수하게 더 빠져나가요. 일자리 부족, 분쟁, 자연재해 등으로 해외로 떠나는 사람이 많으면 인구가 줄어들어요.` });
+  }
+  if (p.bulge > 1.35) f.push({ dir:"more", t:"외국인 노동자 유입", s:`20~54세 남자가 여자보다 약 ${p.bulge.toFixed(1)}배 많아요. 석유 산업, 건설 등 일자리를 찾아 다른 나라에서 젊은 남성 노동자가 많이 들어왔기 때문이에요.` });
+  if (d.le !== null){
+    if (d.le >= 78) f.push({ dir:"more", t:"발달한 의료와 긴 수명", s:`기대수명이 ${d.le.toFixed(1)}세로 길어요. 출생이 줄어도 오래 사는 사람이 많아 인구가 급격히 줄지는 않지만, 노인 인구 비율(${p.old.toFixed(1)}%)이 높아져요.` });
+    else if (d.le < 65) f.push({ dir:"less", t:"짧은 수명", s:`기대수명이 ${d.le.toFixed(1)}세로 세계 평균(약 ${WORLD_LE}세)보다 짧아요. 의료 시설과 깨끗한 물이 부족하거나 질병, 분쟁이 많으면 사망률이 높아져요.` });
+  }
+  if (d.urban != null){
+    f.push({ dir:"info", t:"도시에 사는 사람", s:`전체 인구의 ${d.urban.toFixed(0)}%가 도시에 살아요. ` + (d.urban >= 75 ? "대부분 도시에 모여 살아요. 산업이 발달하고 일자리가 도시에 몰려 있는 나라의 특징이에요." : d.urban < 40 ? "아직 많은 사람이 농촌에 살아요. 농업 중심 사회의 특징이에요." : "도시와 농촌에 사는 사람이 섞여 있어요. 도시로 이동하는 사람이 늘고 있을 가능성이 커요.") });
+  }
+  if (!f.length) f.push({ dir:"info", t:"자료가 부족해요", s:"이 나라는 세계은행 자료가 많지 않아요. 위키백과와 지도를 함께 살펴보세요." });
+  return f;
+}
+
+/* ---------- 위키백과 소개 ---------- */
+async function loadWiki(iso, name){
+  const box = $("wiki");
+  box.innerHTML = `<p class="loading">위키백과에서 소개를 불러오는 중이에요.</p>`;
+  const title = WIKI_TITLE[iso] || name;
+  try {
+    const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), 6000);
+    const r = await fetch(`https://ko.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`, { signal:ctl.signal });
+    clearTimeout(to);
+    if (!r.ok) throw 0;
+    const j = await r.json();
+    if (state.iso !== iso) return;
+    if (!j.extract || j.type === "disambiguation") throw 0;
+    const url = j.content_urls && j.content_urls.desktop ? j.content_urls.desktop.page : `https://ko.wikipedia.org/wiki/${encodeURIComponent(title)}`;
+    box.innerHTML = `<blockquote>${esc(j.extract)}</blockquote><p class="muted" style="font-size:13px">출처: <a href="${url}" target="_blank" rel="noopener">위키백과 ‘${esc(j.title || title)}’</a></p>`;
+  } catch (e) {
+    if (state.iso !== iso) return;
+    box.innerHTML = `<p class="muted">위키백과 소개를 불러오지 못했어요. 아래 네이버 지식백과나 위키백과 링크에서 직접 찾아보세요.</p>`;
+  }
+}
+
+go(1);
+</script>
+</body>
+</html>
